@@ -48,7 +48,7 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
 
   if (!!nodeRulesContract) {
     const handleAdd = async (value: any) => {
-      const { enode, type, organization, name } = value;
+      const { enode, type, organization, name, did } = value;
       const { enodeHigh, enodeLow, ip, port } = enodeToParams(enode);
 
       const geoHash = await getGeohash(ip);
@@ -60,7 +60,8 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
         nodeType: type,
         geoHash,
         name,
-        organization
+        organization,
+        did
       });
       try {
         const tx = await nodeRulesContract!.functions.addEnode(
@@ -72,22 +73,23 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
           utils.hexlify(types[type]),
           geoHash,
           name,
-          organization
+          organization,
+          did
         );
         toggleModal('add')(false);
         addTransaction(identifier, PENDING_ADDITION);
-        const receipt = await tx.wait(1); // wait on receipt confirmations
+        const receipt = await tx.wait(3); // wait on receipt confirmations
         const addEvent = receipt.events!.filter(e => e.event && e.event === 'NodeAdded').pop();
         if (!addEvent) {
-          openToast(value, FAIL, `Error while processing node: ${value}`);
+          openToast(value, FAIL, `Error while processing node: ${value.enode}`);
         } else {
           const addSuccessResult = idx(addEvent, _ => _.args[0]);
           if (addSuccessResult === undefined) {
-            openToast(value, FAIL, `Error while adding node: ${value}`);
+            openToast(value, FAIL, `Error while adding node: ${value.enode}`);
           } else if (Boolean(addSuccessResult)) {
-            openToast(value, SUCCESS, `New node added: ${value}`);
+            openToast(value, SUCCESS, `New node added: ${value.enode}`);
           } else {
-            openToast(value, FAIL, `Node "${value}" is already added`);
+            openToast(value, FAIL, `Node "${value.enode}" is already added`);
           }
         }
         deleteTransaction(identifier);
@@ -126,7 +128,7 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
         );
         toggleModal('remove')(false);
         addTransaction(value, PENDING_REMOVAL);
-        await tx.wait(1); // wait on receipt confirmations
+        await tx.wait(3); // wait on receipt confirmations
         openToast(value, SUCCESS, `Removal of node processed: ${enodeHigh}${enodeLow}`);
         deleteTransaction(value);
       } catch (e) {

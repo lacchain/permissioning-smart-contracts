@@ -19,7 +19,8 @@ const AppBar: React.FC<{}> = () => (
     width="100%"
     zIndex="2"
   >
-    <Heading.h3>Besu Permissioning</Heading.h3>
+    <Heading.h3>LACCHAIN Besu Permissioning</Heading.h3>
+    <img src="https://www.lacchain.net/assets/images/logo-lacchain-footer.png" alt="LACCHAIN" height={40} />
   </Flex>
 );
 

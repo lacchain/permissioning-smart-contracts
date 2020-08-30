@@ -16,7 +16,8 @@ const AddNodeModalContainer: React.FC<{
     name: '',
     type: 'Writer',
     enode: '',
-    organization: ''
+    organization: '',
+    did: ''
   });
   const [validation, setValidation] = useState({ valid: false });
 
@@ -34,7 +35,8 @@ const AddNodeModalContainer: React.FC<{
       name: '',
       type: 'Writer',
       enode: '',
-      organization: ''
+      organization: '',
+      did: ''
     });
     setValidation({ valid: false });
     handleAdd(node);
@@ -46,7 +48,8 @@ const AddNodeModalContainer: React.FC<{
       name: '',
       type: 'Writer',
       enode: '',
-      organization: ''
+      organization: '',
+      did: ''
     });
     setValidation({ valid: false });
     closeModal();

@@ -27,6 +27,7 @@ type EnodeRow = {
   geoHash: string;
   organization: string;
   name: string;
+  did: string;
   status: string;
   identifier: string;
 };
@@ -41,6 +42,7 @@ const EnodeRow: React.FC<EnodeRow> = ({
   port,
   nodeType,
   geoHash,
+  did,
   organization,
   name,
   status,
@@ -139,6 +141,7 @@ EnodeRow.propTypes = {
   geoHash: PropTypes.string.isRequired,
   organization: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
+  did: PropTypes.string.isRequired,
   identifier: PropTypes.string.isRequired,
   status: PropTypes.string.isRequired,
   isAdmin: PropTypes.bool.isRequired,

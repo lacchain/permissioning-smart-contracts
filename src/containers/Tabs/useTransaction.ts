@@ -5,6 +5,7 @@ export default () => {
   const [transactions, setTransactions] = useState(new Map<string, string>());
 
   const addTransaction = useCallback((identifier: string, status: string) => {
+    console.log('add', transactions, identifier, status);
     setTransactions(transactions => {
       const updatedTransactions = new Map(transactions);
       updatedTransactions.set(identifier, status);
@@ -17,6 +18,7 @@ export default () => {
   ]);
 
   const deleteTransaction = useCallback((identifier: string) => {
+    console.log('delete', transactions, identifier);
     setTransactions(transactions => {
       const updatedTransactions = new Map(transactions);
       updatedTransactions.delete(identifier);

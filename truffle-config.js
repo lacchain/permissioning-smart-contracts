@@ -1,5 +1,5 @@
 const HDWalletProvider = require('truffle-hdwallet-provider');
-const path = require("path");
+const path = require('path');
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -12,36 +12,37 @@ var privateKey = process.env.BESU_NODE_PERM_KEY;
 
 /* The endpoint of the Ethereum node */
 var endpoint = process.env.BESU_NODE_PERM_ENDPOINT;
-if (endpoint === undefined) {
-  endpoint = "http://127.0.0.1:8545";
+if( endpoint === undefined ) {
+  endpoint = 'http://127.0.0.1:8545';
 }
 
 module.exports = {
   networks: {
     development: {
-     provider: () => new HDWalletProvider(privateKey, endpoint),
-     host: "127.0.0.1",
-     port: 8545,
-     network_id: "*",
-     from: address
+      provider: () => new HDWalletProvider( privateKey, endpoint ),
+      host: '127.0.0.1',
+      port: 8545,
+      network_id: '*',
+      gasPrice: 0,
+      from: address
     },
     ganache: {
       host: '127.0.0.1',
       port: 7545,
-      network_id: '*',
+      network_id: '*'
     }
   },
 
-  contracts_build_directory: path.join(__dirname, "src/chain/abis"),
+  contracts_build_directory: path.join( __dirname, 'src/chain/abis' ),
 
   compilers: {
     solc: {
-      version: "0.5.9",
+      version: '0.5.9',
       settings: {
-       optimizer: {
-         enabled: false,
-         runs: 200
-       },
+        optimizer: {
+          enabled: false,
+          runs: 200
+        }
       }
     }
   },
@@ -50,8 +51,8 @@ module.exports = {
     useColors: true,
     reporter: 'mocha-multi-reporters',
     reporterOptions: {
-      configFile: './mocha-reporter-config.json',
-    },
+      configFile: './mocha-reporter-config.json'
+    }
   },
 
   plugins: ['solidity-coverage']

@@ -13,6 +13,7 @@ export type Enode = {
   geoHash: string;
   organization: string;
   name: string;
+  did: string;
 };
 
 const splitAddress = (address: string, digits: number) => {
@@ -100,7 +101,8 @@ export const paramsToIdentifier = ({
   nodeType,
   geoHash,
   name,
-  organization
+  organization,
+  did
 }: {
   enodeHigh: string;
   enodeLow: string;
@@ -110,8 +112,9 @@ export const paramsToIdentifier = ({
   geoHash: string;
   name: string;
   organization: string;
+  did: string;
 }) => {
-  return `${enodeHigh}_${enodeLow}_${ip}_${port}_${nodeType}_${geoHash}_${name}_${organization}`;
+  return `${enodeHigh}_${enodeLow}_${ip}_${port}_${nodeType}_${geoHash}_${name}_${organization}_${did}`;
 };
 
 function getHexIpv4(stringIp: string) {
@@ -125,17 +128,24 @@ function toHex(number: string) {
 }
 
 export const identifierToParams = (identifier: string) => {
-  const [enodeHigh, enodeLow, ip, port, nodeType, geoHash, name, organization] = identifier.split('_');
+  const [enodeHigh, enodeLow, ip, port, nodeType, geoHash, name, organization, did] = identifier.split('_');
+  let type = 0;
+  if (typeof nodeType === 'string') {
+    type = ['Bootnode', 'Validator', 'Writer', 'Observer'].indexOf(nodeType);
+  } else {
+    type = parseInt(nodeType);
+  }
   return {
     enodeHigh,
     enodeLow,
     ip,
     port,
     identifier,
-    nodeType: parseInt(nodeType),
+    nodeType: type,
     geoHash,
     organization,
-    name
+    name,
+    did
   };
 };
 

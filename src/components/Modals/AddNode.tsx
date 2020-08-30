@@ -82,6 +82,22 @@ const AddNodeModal: React.FC<{
           </Form.Field>
           <Form.Field
             mt={3}
+            label="Node DID"
+            className={node.did ? `${validationResult.valid ? styles.validField : styles.invalidField}` : null}
+          >
+            <Form.Input
+              width={1}
+              type="text"
+              name="did"
+              placeholder="did:ethr:lacchain:0x00000000000000000000000000000000000000"
+              value={node.did}
+              onChange={modifyInput}
+              className={styles.fieldInput}
+              required
+            />
+          </Form.Field>
+          <Form.Field
+            mt={3}
             label="Organization"
             className={node.geoHash ? `${validationResult.valid ? styles.validField : styles.invalidField}` : null}
           >
