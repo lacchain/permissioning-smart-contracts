@@ -81,7 +81,7 @@ contract NodeRules is NodeRulesProxy, NodeRulesList {
         bytes16 destinationEnodeIp,
         uint16 destinationEnodePort
     ) public view returns (bytes32) {
-        if (
+        /*if ( 
             enodePermitted (
                 sourceEnodeHigh,
                 sourceEnodeLow,
@@ -93,21 +93,40 @@ contract NodeRules is NodeRulesProxy, NodeRulesList {
                 destinationEnodeIp,
                 destinationEnodePort
             )
-        ) {
+        )*/
+        if (groupConnectionAllowed(
+            sourceEnodeHigh,
+            sourceEnodeLow,
+            sourceEnodeIp,
+            sourceEnodePort,
+            destinationEnodeHigh,
+            destinationEnodeLow,
+            destinationEnodeIp,
+            destinationEnodePort
+        ))
+         {
             return 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
         } else {
             return 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
         }
     }
 
-    function enodePermitted(
+    function addConnection(bytes32 _groupSource, bytes32 _groupDestination) public onlyAdmin onlyOnEditMode returns (bool){
+        return _addConnectionAllowed(_groupSource, _groupDestination);
+    }
+
+    function removeConnection(bytes32 _groupSource, bytes32 _groupDestination) public onlyAdmin onlyOnEditMode returns (bool){
+        return _removeConnection(_groupSource, _groupDestination);
+    }
+
+    /*function enodePermitted(
         bytes32 enodeHigh,
         bytes32 enodeLow,
         bytes16 ip,
         uint16 port
     ) public view returns (bool) {
         return exists(enodeHigh, enodeLow, ip, port);
-    }
+    }*/
 
     function addEnode(
         bytes32 enodeHigh,
@@ -118,13 +137,15 @@ contract NodeRules is NodeRulesProxy, NodeRulesList {
         bytes6 geoHash,
         string memory name,
         string memory organization,
-        string memory did
+        string memory did,
+        bytes32 group
     ) public onlyAdmin onlyOnEditMode returns (bool) {
-        bool added = add(enodeHigh, enodeLow, ip, port, nodeType, geoHash, name, organization, did );
+        bool added = add(enodeHigh, enodeLow, ip, port, nodeType, geoHash, name, organization, did, group );
 
-        if (added) {
+        //VALIDATE IF DELETE
+        /*if (added) {
             triggerRulesChangeEvent(false);
-        }
+        }*/
         emit NodeAdded(
             added,
             enodeHigh,

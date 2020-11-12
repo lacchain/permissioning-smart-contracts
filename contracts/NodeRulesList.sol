@@ -23,10 +23,12 @@ contract NodeRulesList {
         string name;
         string organization;
         string did;
+        bytes32 group;
     }
 
     enode[] public allowlist;
     mapping (uint256 => uint256) private indexOf; //1-based indexing. 0 means non-existent
+    mapping (bytes32 => bool) private allowGroups;
 
     function calculateKey(bytes32 _enodeHigh, bytes32 _enodeLow, bytes16 _ip, uint16 _port) internal pure returns(uint256) {
         return uint256(keccak256(abi.encodePacked(_enodeHigh, _enodeLow, _ip, _port)));
@@ -40,10 +42,42 @@ contract NodeRulesList {
         return indexOf[calculateKey(_enodeHigh, _enodeLow, _ip, _port)] != 0;
     }
 
-    function add(bytes32 _enodeHigh, bytes32 _enodeLow, bytes16 _ip, uint16 _port, NodeType _nodeType, bytes6 _geoHash, string memory _name, string memory _organization, string memory _did ) internal returns (bool) {
+    function groupConnectionAllowed(
+        bytes32 sourceEnodeHigh,
+        bytes32 sourceEnodeLow,
+        bytes16 sourceEnodeIp,
+        uint16 sourceEnodePort,
+        bytes32 destinationEnodeHigh,
+        bytes32 destinationEnodeLow,
+        bytes16 destinationEnodeIp,
+        uint16 destinationEnodePort) internal view returns (bool){
+        if (exists(sourceEnodeHigh,sourceEnodeLow,sourceEnodeIp,sourceEnodePort) && exists(destinationEnodeHigh,destinationEnodeLow,destinationEnodeIp,destinationEnodePort)){    
+            enode memory source = allowlist[indexOf[calculateKey(sourceEnodeHigh, sourceEnodeLow, sourceEnodeIp, sourceEnodePort)]-1];
+            enode memory destination = allowlist[indexOf[calculateKey(destinationEnodeHigh, destinationEnodeLow, destinationEnodeIp, destinationEnodePort)]-1];        
+
+            return allowGroups[keccak256(abi.encodePacked(source.group, destination.group))];
+        }
+        else{
+            return false;
+        }
+    }
+
+    function _addConnectionAllowed(bytes32 groupSource, bytes32 groupDestination)internal returns(bool){
+        allowGroups[keccak256(abi.encodePacked(groupSource, groupDestination))]=true;
+        allowGroups[keccak256(abi.encodePacked(groupDestination, groupSource))]=true;
+        return true;
+    }
+
+    function _removeConnection(bytes32 groupSource, bytes32 groupDestination)internal returns(bool){
+        allowGroups[keccak256(abi.encodePacked(groupSource, groupDestination))]=false;
+        allowGroups[keccak256(abi.encodePacked(groupDestination, groupSource))]=false;
+        return true;
+    }
+
+    function add(bytes32 _enodeHigh, bytes32 _enodeLow, bytes16 _ip, uint16 _port, NodeType _nodeType, bytes6 _geoHash, string memory _name, string memory _organization, string memory _did, bytes32 _group) internal returns (bool) {
         uint256 key = calculateKey(_enodeHigh, _enodeLow, _ip, _port);
         if (indexOf[key] == 0) {
-            indexOf[key] = allowlist.push(enode(_enodeHigh, _enodeLow, _ip, _port, _nodeType, _geoHash, _name, _organization, _did));
+            indexOf[key] = allowlist.push(enode(_enodeHigh, _enodeLow, _ip, _port, _nodeType, _geoHash, _name, _organization, _did, _group));
             return true;
         }
         return false;
