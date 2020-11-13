@@ -183,10 +183,21 @@ contract NodeRules is NodeRulesProxy, NodeRulesList {
         return size();
     }
 
-    function getByIndex(uint index) public view returns (bytes32 enodeHigh, bytes32 enodeLow, bytes16 ip, uint16 port, NodeType nodeType, bytes6 geoHash, string memory name, string memory organization, string memory did) {
+    function getByIndex(uint index) public view returns (bytes32 enodeHigh, bytes32 enodeLow, bytes16 ip, uint16 port, NodeType nodeType, bytes6 geoHash, string memory name, string memory organization, string memory did, bytes32 group) {
         if (index >= 0 && index < size()) {
             enode memory item = allowlist[index];
-            return (item.enodeHigh, item.enodeLow, item.ip, item.port, item.nodeType, item.geoHash, item.name, item.organization, item.did);
+            return (item.enodeHigh, item.enodeLow, item.ip, item.port, item.nodeType, item.geoHash, item.name, item.organization, item.did, item.group);
+        }
+    }
+
+    function getByEnode(
+        bytes32 _enodeHigh,
+        bytes32 _enodeLow,
+        bytes16 _ip,
+        uint16 _port)public view returns (NodeType nodeType, bytes6 geoHash, string memory name, string memory organization, string memory did, bytes32 group) {
+        enode memory item = allowlist[indexOf[calculateKey(_enodeHigh, _enodeLow, _ip, _port)]-1];
+        if(item.enodeHigh!=0){
+            return (item.nodeType, item.geoHash, item.name, item.organization, item.did, item.group);
         }
     }
 

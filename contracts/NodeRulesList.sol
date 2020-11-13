@@ -27,7 +27,7 @@ contract NodeRulesList {
     }
 
     enode[] public allowlist;
-    mapping (uint256 => uint256) private indexOf; //1-based indexing. 0 means non-existent
+    mapping (uint256 => uint256) internal indexOf; //1-based indexing. 0 means non-existent
     mapping (bytes32 => bool) private allowGroups;
 
     function calculateKey(bytes32 _enodeHigh, bytes32 _enodeLow, bytes16 _ip, uint16 _port) internal pure returns(uint256) {
