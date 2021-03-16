@@ -29,6 +29,7 @@ src/chain/abis
 src/chain/@types
 .DS_Store
 .idea
+networks.js
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
@@ -119,3 +120,5 @@ junit.xml
 
 # VSCode settings
 .vscode/
+
+.openzeppelin/

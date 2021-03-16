@@ -13,7 +13,10 @@ contract NodeRules is NodeRulesProxy, NodeRulesList {
         bytes32 enodeHigh,
         bytes32 enodeLow,
         bytes16 enodeIp,
-        uint16 enodePort
+        uint16 enodePort,
+        uint8 nodeType,
+        address nodeAddress,
+        bytes32 location
     );
 
     event NodeRemoved(
@@ -113,9 +116,12 @@ contract NodeRules is NodeRulesProxy, NodeRulesList {
         bytes32 enodeHigh,
         bytes32 enodeLow,
         bytes16 ip,
-        uint16 port
+        uint16 port,
+        uint8 nodeType,
+        address nodeAddress,
+        bytes32 location
     ) public onlyAdmin onlyOnEditMode returns (bool) {
-        bool added = add(enodeHigh, enodeLow, ip, port);
+        bool added = add(enodeHigh, enodeLow, ip, port, nodeType, nodeAddress, location);
 
         if (added) {
             triggerRulesChangeEvent(false);
@@ -125,7 +131,10 @@ contract NodeRules is NodeRulesProxy, NodeRulesList {
             enodeHigh,
             enodeLow,
             ip,
-            port
+            port,
+            nodeType,
+            nodeAddress,
+            location
         );
 
         return added;

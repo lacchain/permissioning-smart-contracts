@@ -8,6 +8,7 @@ import "./Admin.sol";
 
 contract AccountRules is AccountRulesProxy, AccountRulesList {
 
+    address constant public ON_CHAIN_PRIVACY_ADDRESS = 0x000000000000000000000000000000000000007E;
     // in read-only mode rules can't be added/removed
     // this will be used to protect data when upgrading contracts
     bool private readOnlyMode = false;
@@ -15,6 +16,8 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
     uint private version = 1000000;
 
     AccountIngress private ingressContract;
+
+    address private relayHub;
 
     modifier onlyOnEditMode() {
         require(!readOnlyMode, "In read only mode: rules cannot be modified");
@@ -31,7 +34,7 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
 
     constructor (AccountIngress _ingressContract) public {
         ingressContract = _ingressContract;
-        add(msg.sender);
+        addNewAccount(msg.sender);
     }
 
     // VERSION
@@ -58,15 +61,14 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
 
     function transactionAllowed(
         address sender,
-        address, // target
+        address target,
         uint256, // value
         uint256, // gasPrice
         uint256, // gasLimit
         bytes memory // payload
     ) public view returns (bool) {
-        if (
-            accountPermitted (sender)
-        ) {
+        if (accountPermitted(sender) && destinationPermitted(target)) {
+            //decreaseGasLimit(sender, target);
             return true;
         } else {
             return false;
@@ -76,38 +78,96 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
     function accountPermitted(
         address _account
     ) public view returns (bool) {
-        return exists(_account);
+        return existsAccount(_account);
+    }
+
+    function destinationPermitted(
+        address _target
+    ) public view returns (bool) {
+        return existsTarget(_target);
     }
 
     function addAccount(
         address account
     ) public onlyAdmin onlyOnEditMode returns (bool) {
-        bool added = add(account);
+        bool added = addNewAccount(account);
         emit AccountAdded(added, account);
+        //call add gasLimit
+        if (added){
+            bytes memory payload = abi.encodeWithSignature("addNode(address)",account);
+            (bool cResponse, bytes memory result) = relayHub.call(payload);
+            added = cResponse;
+            require (cResponse, "Node haven't been added to GasLimit");
+        }
         return added;
     }
 
     function removeAccount(
         address account
     ) public onlyAdmin onlyOnEditMode returns (bool) {
-        bool removed = remove(account);
+        bool removed = removeOldAccount(account);
         emit AccountRemoved(removed, account);
         return removed;
     }
 
     function getSize() public view returns (uint) {
-        return size();
+        return sizeAccounts();
     }
 
     function getByIndex(uint index) public view returns (address account) {
-        return allowlist[index];
+        return accountAllowList[index];
     }
 
     function getAccounts() public view returns (address[] memory){
-        return allowlist;
+        return accountAllowList;
+    }
+
+    function getTargets() public view returns (address[] memory){
+        return targetAllowList; 
     }
 
     function addAccounts(address[] memory accounts) public onlyAdmin returns (bool) {
-        return addAll(accounts);
+        return addAllAccounts(accounts);
     }
+
+    function addTarget(
+        address target
+    ) public onlyAdmin onlyOnEditMode returns (bool) {
+        bool added = addNewTarget(target);
+        emit TargetAdded(added, target);
+        return added;
+    }
+
+    function removeTarget(
+        address target
+    ) public onlyAdmin onlyOnEditMode returns (bool) {
+        bool removed = removeOldTarget(target);
+        emit TargetRemoved(removed, target);
+        return removed;
+    }
+
+    function addTargets(address[] memory targets) public onlyAdmin returns (bool) {
+        return addAllTargets(targets);
+    }
+
+    function setRelay(address _relayHub) public onlyAdmin returns (bool) {
+        relayHub = _relayHub;
+    }
+
+    function decreaseGasLimit(address _sender, address _target) private returns (bool){
+        emit AccountVerified(true, _sender);
+        uint256 gasUsed = 300000;
+        if (_target == ON_CHAIN_PRIVACY_ADDRESS){
+            gasUsed = 25000;    
+        } 
+        
+        bytes memory payload = abi.encodeWithSignature("decreaseGasUsed(address,uint256)",_sender,gasUsed);
+        (bool cResponse, bytes memory result) = relayHub.call(payload);
+        return cResponse;
+    }
+
+    event AccountVerified(
+        bool accountAdded,
+        address accountAddress
+    );
 }
