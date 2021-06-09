@@ -8,7 +8,6 @@ import "./Admin.sol";
 
 contract AccountRules is AccountRulesProxy, AccountRulesList {
 
-    address constant public ON_CHAIN_PRIVACY_ADDRESS = 0x000000000000000000000000000000000000007E;
     // in read-only mode rules can't be added/removed
     // this will be used to protect data when upgrading contracts
     bool private readOnlyMode = false;
@@ -64,15 +63,17 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
         address target,
         uint256, // value
         uint256, // gasPrice
-        uint256, // gasLimit
+        uint256 gasLimit,
         bytes memory // payload
     ) public view returns (bool) {
-        if (accountPermitted(sender) && destinationPermitted(target)) {
-            //decreaseGasLimit(sender, target);
-            return true;
-        } else {
+        if (!accountPermitted(sender) && !destinationPermitted(target)) {
+            return false;
+        } 
+
+        if (gasLimit<300000){
             return false;
         }
+        return true;
     }
 
     function accountPermitted(
@@ -152,18 +153,6 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
 
     function setRelay(address _relayHub) public onlyAdmin returns (bool) {
         relayHub = _relayHub;
-    }
-
-    function decreaseGasLimit(address _sender, address _target) private returns (bool){
-        emit AccountVerified(true, _sender);
-        uint256 gasUsed = 300000;
-        if (_target == ON_CHAIN_PRIVACY_ADDRESS){
-            gasUsed = 25000;    
-        } 
-        
-        bytes memory payload = abi.encodeWithSignature("decreaseGasUsed(address,uint256)",_sender,gasUsed);
-        (bool cResponse, bytes memory result) = relayHub.call(payload);
-        return cResponse;
     }
 
     event AccountVerified(
