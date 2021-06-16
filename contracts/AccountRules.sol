@@ -8,6 +8,9 @@ import "./Admin.sol";
 
 contract AccountRules is AccountRulesProxy, AccountRulesList {
 
+    event RelayHubSet(
+        address newRelayHub
+    );
     // in read-only mode rules can't be added/removed
     // this will be used to protect data when upgrading contracts
     bool private readOnlyMode = false;
@@ -153,6 +156,7 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
 
     function setRelay(address _relayHub) public onlyAdmin returns (bool) {
         relayHub = _relayHub;
+        emit RelayHubSet(_relayHub);
     }
 
     event AccountVerified(
