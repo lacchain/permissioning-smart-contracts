@@ -65,15 +65,23 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
         address sender,
         address target,
         uint256, // value
-        uint256, // gasPrice
+        uint256 gasPrice,
         uint256 gasLimit,
-        bytes memory // payload
+        bytes memory payload
     ) public view returns (bool) {
+        if (gasPrice>0){
+            return false;
+        }
+
+        bytes4 func = readBytes4(payload);
+
         if (!accountPermitted(sender) && !destinationPermitted(target)) {
             return false;
-        } 
+        }
 
-        if (gasLimit<300000){
+        uint256 gasLimitRequired = payload.length * 22 + 26000;
+
+        if (gasLimit<gasLimitRequired){
             return false;
         }
         return true;
@@ -157,6 +165,16 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
     function setRelay(address _relayHub) public onlyAdmin returns (bool) {
         relayHub = _relayHub;
         emit RelayHubSet(_relayHub);
+    }
+
+    function readBytes4(bytes memory b) internal pure returns(bytes4 result){
+        assembly {
+            result := mload(add(b, 32))
+            // Solidity does not require us to clean the trailing bytes.
+            // We do it anyway
+            result := and(result, 0xFFFFFFFF00000000000000000000000000000000000000000000000000000000)
+        }
+        return result;
     }
 
     event AccountVerified(
