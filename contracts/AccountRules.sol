@@ -4,9 +4,11 @@ import "./AccountRulesProxy.sol";
 import "./AccountRulesList.sol";
 import "./AccountIngress.sol";
 import "./Admin.sol";
-
+import "./lib/LibBytesV06.sol";
 
 contract AccountRules is AccountRulesProxy, AccountRulesList {
+
+    using LibBytesV06 for bytes;
 
     event RelayHubSet(
         address newRelayHub
@@ -67,23 +69,36 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
         uint256, // value
         uint256 gasPrice,
         uint256 gasLimit,
-        bytes memory payload
+        bytes memory payload  //0xf8...+RLP user
     ) public view returns (bool) {
         if (gasPrice>0){
             return false;
         }
 
-        bytes4 func = readBytes4(payload);
-
-        if (!accountPermitted(sender) && !destinationPermitted(target)) {
+        if (!accountPermitted(sender) || !destinationPermitted(target)) {
             return false;
         }
 
-        uint256 gasLimitRequired = payload.length * 22 + 26000;
+        uint256 gasLimitRequired = payload.length * 22 + 26000 + 300000; // dinamica + estática
 
         if (gasLimit<gasLimitRequired){
             return false;
         }
+
+        bytes4 func = readBytes4(payload);
+
+        if (func==0xa04fb2ad || func==0x4b802a36) {
+            (address writerAddress, uint256 expiration) = getProtectionParameters(payload);
+            
+            if (expiration < block.timestamp){
+                return false;
+            }
+
+            if (writerAddress != sender){
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -175,6 +190,20 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
             result := and(result, 0xFFFFFFFF00000000000000000000000000000000000000000000000000000000)
         }
         return result;
+    }
+
+    // Besu add n bytes for padding at the end of data payload, it complete to 32 bytes 
+    // (https://github.com/hyperledger/besu/blob/master/ethereum/permissioning/src/main/java/org/hyperledger/besu/ethereum/permissioning/TransactionSmartContractPermissioningController.java#L201)
+    function getProtectionParameters(bytes memory b) internal pure returns(address, uint256){
+        uint256 remainder = b.length % 32;
+        uint256 paddingZeros = 32 - remainder + 4;
+        bytes memory nodeBytes = new bytes(20);
+        nodeBytes = b.slice(b.length-20-32-paddingZeros,b.length-32-paddingZeros);
+        bytes memory expirationBytes = new bytes(32);
+        expirationBytes = b.slice(b.length-32-paddingZeros,b.length-paddingZeros);
+        address nodeAddress = nodeBytes.readAddress(0);
+        uint256 expiration = expirationBytes.readUint256(0);
+        return (nodeAddress, expiration);
     }
 
     event AccountVerified(
