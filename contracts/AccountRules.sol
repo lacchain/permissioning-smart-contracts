@@ -192,11 +192,12 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
         return result;
     }
 
-    // Besu add n bytes for padding at the end of data payload, it complete to 32 bytes 
+    // Besu add n bytes for padding at the end of data payload, it to complete 32 bytes 
     // (https://github.com/hyperledger/besu/blob/master/ethereum/permissioning/src/main/java/org/hyperledger/besu/ethereum/permissioning/TransactionSmartContractPermissioningController.java#L201)
     function getProtectionParameters(bytes memory b) internal pure returns(address, uint256){
-        uint256 remainder = b.length % 32;
-        uint256 paddingZeros = 32 - remainder + 4;
+        uint256 sizeRLP = b.readUint256(132);  //132, because it is fifth parameter of payload
+        uint256 remainder = (sizeRLP + 164) % 32;  //164 because data bytes start after 164 bytes
+        uint256 paddingZeros = 32 - remainder + 4;  //complete to 32 bytes with zeros plus 4 bytes for function name
         bytes memory nodeBytes = new bytes(20);
         nodeBytes = b.slice(b.length-20-32-paddingZeros,b.length-32-paddingZeros);
         bytes memory expirationBytes = new bytes(32);
