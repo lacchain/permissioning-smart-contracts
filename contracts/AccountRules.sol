@@ -79,7 +79,7 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
             return false;
         }
 
-        uint256 gasLimitRequired = payload.length * 22 + 26000 + 300000; // dinamica + estática
+        uint256 gasLimitRequired = payload.length * 105 + 300000; // dinamica + estática
 
         if (gasLimit<gasLimitRequired){
             return false;
@@ -87,9 +87,13 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
 
         bytes4 func = readBytes4(payload);
 
-        if (func==0xa04fb2ad || func==0x4b802a36) {
-            (address writerAddress, uint256 expiration) = getProtectionParameters(payload);
+        if (func==0x1416862c || func==0x3ef54cef) {
+            (uint gasLimitTx, address writerAddress, uint256 expiration) = getProtectionParameters(payload);
             
+            if (gasLimit != gasLimitTx){
+                return false;
+            }
+
             if (expiration < block.timestamp){
                 return false;
             }
@@ -194,9 +198,10 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
 
     // Besu add n bytes for padding at the end of data payload, it to complete 32 bytes 
     // (https://github.com/hyperledger/besu/blob/master/ethereum/permissioning/src/main/java/org/hyperledger/besu/ethereum/permissioning/TransactionSmartContractPermissioningController.java#L201)
-    function getProtectionParameters(bytes memory b) internal pure returns(address, uint256){
-        uint256 sizeRLP = b.readUint256(132);  //132, because it is fifth parameter of payload
-        uint256 remainder = (sizeRLP + 164) % 32;  //164 because data bytes start after 164 bytes
+    function getProtectionParameters(bytes memory b) internal pure returns(uint256, address, uint256){
+        uint256 gasLimit = b.readUint256(132); //132, because gasLimit is fifth parameter of payload  
+        uint256 sizeRLP = b.readUint256(164);  //164, because size of RLP is sixth parameter of payload
+        uint256 remainder = (sizeRLP + 196) % 32;  //196 because data bytes start after 196 bytes
         uint256 paddingZeros = 32 - remainder + 4;  //complete to 32 bytes with zeros plus 4 bytes for function name
         bytes memory nodeBytes = new bytes(20);
         nodeBytes = b.slice(b.length-20-32-paddingZeros,b.length-32-paddingZeros);
@@ -204,7 +209,7 @@ contract AccountRules is AccountRulesProxy, AccountRulesList {
         expirationBytes = b.slice(b.length-32-paddingZeros,b.length-paddingZeros);
         address nodeAddress = nodeBytes.readAddress(0);
         uint256 expiration = expirationBytes.readUint256(0);
-        return (nodeAddress, expiration);
+        return (gasLimit, nodeAddress, expiration);
     }
 
     event AccountVerified(
