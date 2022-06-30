@@ -47,7 +47,7 @@ module.exports = async(deployer, network) => {
     }
 
     await accountRulesContract.addTarget("0x1Fa12c57ABab623beCc34A69cB526AD39c6338D6"); //RelayHub
-    await accountRulesContract.addAccount("0x211152ca21d5daedbcfbf61173886bbb1a217242")
+    await accountRulesContract.addAccount("0x211152ca21d5daedbcfbf61173886bbb1a217242",3)
 
     await accountIngressInstance.setContractAddress(rulesContractName, Rules.address);
     console.log("   > Updated AccountIngress contract with Rules address = " + Rules.address);
