@@ -2,35 +2,53 @@
 import React, { Fragment } from 'react';
 import PropTypes from 'prop-types'; // Components
 import EnodeTable from './Table';
-import AddModal from '../../containers/Modals/Add';
+import AddModal from '../../containers/Modals/AddNode';
 import RemoveModal from '../../containers/Modals/Remove';
 // Constants
 import { addEnodeDisplay, removeEnodeDisplay } from '../../constants/modals';
-import { Enode } from '../../util/enodetools';
+import { Enode, EnodeTransaction } from '../../util/enodetools';
 
 type EnodeTab = {
   list: (Enode & { identifier: string; status: string })[];
+  listTransaction: (EnodeTransaction & { identifier: string; status: string })[];
   modals: {
     add: boolean;
     remove: string;
     lock: boolean;
   };
   toggleModal: (name: 'add' | 'remove' | 'lock') => (value?: boolean | string) => void;
-  handleAdd: (value: any) => Promise<void>;
+  handleAdd: (enode:string,nodeType:string, nodeName:string,nodeOrganization:string,nodeGeoHash:string , nodeDid:string) => Promise<void>;
   handleRemove: (value: any) => Promise<void>;
+  handleConfirm:(value: any) => Promise<void>;
+  handleRevoke:(value: any) => Promise<void>;
   isAdmin: boolean;
   deleteTransaction: (identifier: string) => void;
   isValid: (address: string) => { valid: boolean };
   isOpen: boolean;
   isReadOnly: boolean;
+  modifySelectType: (input: { target: { value: string } }) => void;
+  selectTypeSearch : string;
+  modifyInputSearchOrganization: (input: { target: { value: string } }) => void;
+  inputSearchOrganization : string;
+  handleSearch: (e: MouseEvent) => void;
+  handleClear: (e: MouseEvent) => void;
 };
 
 const EnodeTab: React.FC<EnodeTab> = ({
+  inputSearchOrganization,
+  modifyInputSearchOrganization,
+  modifySelectType,
+  selectTypeSearch,
+  handleSearch,
+  handleClear,
   list,
+  listTransaction,
   modals,
   toggleModal,
   handleAdd,
   handleRemove,
+  handleConfirm,
+  handleRevoke,
   isAdmin,
   isReadOnly,
   deleteTransaction,
@@ -41,10 +59,19 @@ const EnodeTab: React.FC<EnodeTab> = ({
     {isOpen && (
       <Fragment>
         <EnodeTable
+        inputSearchOrganization={inputSearchOrganization}
+        modifyInputSearchOrganization={modifyInputSearchOrganization}
+         modifySelectType={modifySelectType}
+         selectTypeSearch={selectTypeSearch}
+         handleSearch={handleSearch}
+         handleClear={handleClear}
           list={list}
+          listTransaction={listTransaction}
           toggleModal={toggleModal}
           isAdmin={isAdmin}
           deleteTransaction={deleteTransaction}
+          handleConfirm={handleConfirm}
+          handleRevoke={handleRevoke}
           isReadOnly={isReadOnly}
         />
         <AddModal

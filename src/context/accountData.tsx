@@ -1,18 +1,23 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { AccountRules } from '../chain/@types/AccountRules';
 import { accountRulesFactory } from '../chain/contracts/AccountRules';
+
+
 import { useNetwork } from './network';
 
-type Account = { address: string };
-
+type Account = { address: string};
+type AccountTransaction = { address: string , isAccount:boolean,executed:boolean , transactionId:number};
 type ContextType =
   | {
       accountList: Account[];
+      accountTransactionList: AccountTransaction[];
       setAccountList: React.Dispatch<React.SetStateAction<Account[]>>;
+      setAccountTransactionList: React.Dispatch<React.SetStateAction<AccountTransaction[]>>;
       accountReadOnly?: boolean;
       setAccountReadOnly: React.Dispatch<React.SetStateAction<boolean | undefined>>;
       accountRulesContract?: AccountRules;
       setAccountRulesContract: React.Dispatch<React.SetStateAction<AccountRules | undefined>>;
+  
     }
   | undefined;
 
@@ -21,22 +26,50 @@ const AccountDataContext = createContext<ContextType>(undefined);
 const loadAccountData = (
   accountRulesContract: AccountRules | undefined,
   setAccountList: (account: Account[]) => void,
+  setAccountTransactionList: (account: AccountTransaction[]) => void,
   setAccountReadOnly: (readOnly?: boolean) => void
 ) => {
-  if (accountRulesContract === undefined) {
+  if (accountRulesContract === undefined ) {
     setAccountList([]);
+    setAccountTransactionList([]);
     setAccountReadOnly(undefined);
   } else {
+   
     accountRulesContract.functions.isReadOnly().then(isReadOnly => setAccountReadOnly(isReadOnly));
-    accountRulesContract.functions.getSize().then(listSize => {
+ 
+    accountRulesContract.functions.getSizeAccounts().then(listSize => {
+    
       const listElementsPromises = [];
       for (let i = 0; listSize.gt(i); i++) {
+        
         listElementsPromises.push(accountRulesContract.functions.getByIndex(i));
       }
       Promise.all(listElementsPromises).then(responses => {
+          // responses.map( address =>{ 
+          //   console.log(address)
+          // });
         setAccountList(responses.map(address => ({ address })));
       });
     });
+ 
+    //===========
+    accountRulesContract.functions.getTransactionCount(true,false).then(countTransaction =>{
+      
+      accountRulesContract.functions.getTransactionIds(0,countTransaction,true,false).then(listTransaction=>{
+        const listElementsPromisesTransaction = [];
+         for (let i = 0; i< listTransaction.length; i++) {
+          listElementsPromisesTransaction.push(accountRulesContract.functions.getTransaction(listTransaction[i]));
+        }
+     
+        Promise.all(listElementsPromisesTransaction).then(responses => {
+          const responseF= responses.filter(transaction => transaction[1] );
+          setAccountTransactionList(responseF.map(transaction => ({address:transaction[0],isAccount:transaction[1],executed:transaction[2],transactionId: transaction[3].toNumber() })));
+          
+        });
+      });
+     
+    });
+    //===========
   }
 };
 
@@ -48,7 +81,10 @@ const loadAccountData = (
  *  - setAccountList: setter for the allowlist state
  */
 export const AccountDataProvider: React.FC<{}> = props => {
+  
+
   const [accountList, setAccountList] = useState<Account[]>([]);
+  const [accountTransactionList, setAccountTransactionList] = useState<AccountTransaction[]>([]);
   const [accountReadOnly, setAccountReadOnly] = useState<boolean | undefined>(undefined);
   const [accountRulesContract, setAccountRulesContract] = useState<AccountRules | undefined>(undefined);
 
@@ -56,37 +92,56 @@ export const AccountDataProvider: React.FC<{}> = props => {
     () => ({
       accountList: accountList,
       setAccountList: setAccountList,
+      accountTransactionList: accountTransactionList,
+      setAccountTransactionList: setAccountTransactionList,
       accountReadOnly,
       setAccountReadOnly,
       accountRulesContract,
       setAccountRulesContract
     }),
-    [accountList, setAccountList, accountReadOnly, setAccountReadOnly, accountRulesContract, setAccountRulesContract]
+    [accountList, setAccountList,accountTransactionList,setAccountTransactionList,  accountReadOnly, setAccountReadOnly, accountRulesContract,setAccountRulesContract]
   );
-
+  
   const { accountIngressContract } = useNetwork();
 
   useEffect(() => {
-    if (accountIngressContract === undefined) {
+   
+    if (accountIngressContract === undefined ) {
       setAccountRulesContract(undefined);
     } else {
       accountRulesFactory(accountIngressContract).then(contract => {
         setAccountRulesContract(contract);
-        contract.removeAllListeners('AccountAdded');
-        contract.removeAllListeners('AccountRemoved');
-        contract.on('AccountAdded', (success, account, event) => {
-          if (success) {
-            loadAccountData(contract, setAccountList, setAccountReadOnly);
-          }
-        });
-        contract.on('AccountRemoved', (success, account, event) => {
-          if (success) {
-            loadAccountData(contract, setAccountList, setAccountReadOnly);
-          }
-        });
+        
+         
+
+          contract.removeAllListeners('AccountAdded');
+          contract.removeAllListeners('AccountRemoved');
+          contract.removeAllListeners('Confirmation');
+          contract.removeAllListeners('Revocation')
+          contract.on('AccountAdded', (success, account, event) => {
+            if (success) {
+              loadAccountData(contract,setAccountList,setAccountTransactionList, setAccountReadOnly);
+            }
+          });
+          contract.on('AccountRemoved', (success, account, event) => {
+            if (success) {
+              loadAccountData(contract,setAccountList,setAccountTransactionList, setAccountReadOnly);
+            }
+          });
+          contract.on('Confirmation', (success, account, event) => {
+            if (success) {
+              loadAccountData(contract,setAccountList,setAccountTransactionList, setAccountReadOnly);
+            }
+          });
+          contract.on('Revocation', (success, account, event) => {
+            if (success) {
+              loadAccountData(contract,setAccountList,setAccountTransactionList, setAccountReadOnly);
+            }
+          });
+
       });
     }
-  }, [accountIngressContract, setAccountList, setAccountReadOnly]);
+  }, [accountIngressContract, setAccountList,setAccountTransactionList, setAccountReadOnly]);
 
   return <AccountDataContext.Provider value={value} {...props} />;
 };
@@ -107,11 +162,11 @@ export const useAccountData = () => {
     throw new Error('useAccountData must be used within an AccountDataProvider.');
   }
 
-  const { accountList, setAccountList, accountReadOnly, setAccountReadOnly, accountRulesContract } = context;
+  const { accountList, accountTransactionList,setAccountList,setAccountTransactionList, accountReadOnly, setAccountReadOnly, accountRulesContract } = context;
 
   useEffect(() => {
-    loadAccountData(accountRulesContract, setAccountList, setAccountReadOnly);
-  }, [accountRulesContract, setAccountList, setAccountReadOnly]);
+    loadAccountData(accountRulesContract,setAccountList,setAccountTransactionList, setAccountReadOnly);
+  }, [accountRulesContract, setAccountList,setAccountTransactionList, setAccountReadOnly]);
 
   const formattedAccountList = useMemo(() => {
     return accountList
@@ -123,13 +178,24 @@ export const useAccountData = () => {
       .reverse();
   }, [accountList]);
 
+  const formattedAccountTransactionList = useMemo(() => {
+    return accountTransactionList
+      .map(account => ({
+        ...account,
+        identifier: account.address.toLowerCase(),
+        status: (account.executed) ? 'active' : 'pendingAddition'
+      }))
+      .reverse();
+  }, [accountTransactionList]);
+
   const dataReady = useMemo(() => {
-    return accountRulesContract !== undefined && accountReadOnly !== undefined && accountList !== undefined;
-  }, [accountRulesContract, accountReadOnly, accountList]);
+    return accountRulesContract !== undefined  && accountReadOnly !== undefined && accountList !== undefined && accountTransactionList !== undefined;
+  }, [accountRulesContract, accountReadOnly, accountList, accountTransactionList]);
 
   return {
     dataReady,
     allowlist: formattedAccountList,
+    allowTransactionlist: formattedAccountTransactionList,
     isReadOnly: accountReadOnly,
     accountRulesContract
   };

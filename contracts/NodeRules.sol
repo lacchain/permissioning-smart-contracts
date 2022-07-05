@@ -2,23 +2,24 @@ pragma solidity 0.5.9;
 
 import "./NodeRulesProxy.sol";
 import "./NodeRulesList.sol";
-import "./NodeIngress.sol";
 import "./Admin.sol";
 
 
 contract NodeRules is NodeRulesProxy, NodeRulesList {
 
-    event NodeAdded(
+    event TransactionAdded(
         bool nodeAdded,
-        string enodeId,
-        string enodeHost,
+        bytes32 enodeHigh,
+        bytes32 enodeLow,
+        bytes16 enodeIp,
         uint16 enodePort
     );
 
     event NodeRemoved(
         bool nodeRemoved,
-        string enodeId,
-        string enodeHost,
+        bytes32 enodeHigh,
+        bytes32 enodeLow,
+        bytes16 enodeIp,
         uint16 enodePort
     );
 
@@ -28,15 +29,13 @@ contract NodeRules is NodeRulesProxy, NodeRulesList {
     // version of this contract: semver like 1.2.14 represented like 001002014
     uint private version = 3000000;
 
-    NodeIngress private nodeIngressContract;
-
     modifier onlyOnEditMode() {
         require(!readOnlyMode, "In read only mode: rules cannot be modified");
         _;
     }
 
     modifier onlyAdmin() {
-        address adminContractAddress = nodeIngressContract.getContractAddress(nodeIngressContract.ADMIN_CONTRACT());
+        address adminContractAddress = ingressContract.getContractAddress(ingressContract.ADMIN_CONTRACT());
 
         require(adminContractAddress != address(0), "Ingress contract must have Admin contract registered");
         require(Admin(adminContractAddress).isAuthorized(msg.sender), "Sender not authorized");
@@ -45,7 +44,7 @@ contract NodeRules is NodeRulesProxy, NodeRulesList {
 
     constructor (NodeIngress _nodeIngressAddress, NodeStorage _storage) public {
         setStorage(_storage);
-        nodeIngressContract = _nodeIngressAddress;
+        ingressContract = _nodeIngressAddress;
     }
 
     // VERSION
@@ -71,40 +70,62 @@ contract NodeRules is NodeRulesProxy, NodeRulesList {
     }
 
     function connectionAllowed(
-        string calldata enodeId,
-        string calldata enodeHost,
-        uint16 enodePort
-    ) external view returns (bool) {
-        return
-            enodePermitted (
-                enodeId,
-                enodeHost,
-                enodePort
-            );
+        bytes32 sourceEnodeHigh,
+        bytes32 sourceEnodeLow,
+        bytes16 sourceEnodeIp,
+        uint16 sourceEnodePort,
+        bytes32 destinationEnodeHigh,
+        bytes32 destinationEnodeLow,
+        bytes16 destinationEnodeIp,
+        uint16 destinationEnodePort
+    ) external view returns (bytes32) {
+        if (groupConnectionAllowed(
+            sourceEnodeHigh,
+            sourceEnodeLow,
+            sourceEnodeIp,
+            sourceEnodePort,
+            destinationEnodeHigh,
+            destinationEnodeLow,
+            destinationEnodeIp,
+            destinationEnodePort
+        ))
+         {
+            return 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
+        } else {
+            return 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
+        }
     }
 
-    function enodePermitted(
-        string memory enodeId,
-        string memory host,
-        uint16 port
-    ) public view returns (bool) {
-        return exists(enodeId, host, port);
+    function addConnection(bytes32 _groupSource, bytes32 _groupDestination) public onlyAdmin onlyOnEditMode returns (bool){
+        return _addConnectionAllowed(_groupSource, _groupDestination);
+    }
+
+    function removeConnection(bytes32 _groupSource, bytes32 _groupDestination) public onlyAdmin onlyOnEditMode returns (bool){
+        return _removeConnection(_groupSource, _groupDestination);
     }
 
     function addEnode(
-        string calldata enodeId,
-        string calldata host,
-        uint16 port
-    ) external onlyAdmin onlyOnEditMode returns (bool) {
-        bool added = add(enodeId, host, port);
+        bytes32 enodeHigh,
+        bytes32 enodeLow,
+        bytes16 ip,
+        uint16 port,
+        NodeType nodeType,
+        bytes6 geoHash,
+        string memory name,
+        string memory organization,
+        string memory did,
+        bytes32 group
+    ) public onlyAdmin onlyOnEditMode returns (bool) {
+        bool added = add(enodeHigh,enodeLow, ip, port, nodeType, geoHash, name, organization, did, group);
 
-        if (added) {
+        /*if (added) {
             triggerRulesChangeEvent(false);
-        }
-        emit NodeAdded(
+        }*/
+        emit TransactionAdded(
             added,
-            enodeId,
-            host,
+            enodeHigh,
+            enodeLow,
+            ip,
             port
         );
 
@@ -112,19 +133,21 @@ contract NodeRules is NodeRulesProxy, NodeRulesList {
     }
 
     function removeEnode(
-        string calldata enodeId,
-        string calldata host,
+        bytes32 enodeHigh,
+        bytes32 enodeLow,
+        bytes16 ip,
         uint16 port
     ) external onlyAdmin onlyOnEditMode returns (bool) {
-        bool removed = remove(enodeId, host, port);
+        bool removed = remove(enodeHigh, enodeLow, ip, port);
 
-        if (removed) {
+        /*if (removed) {
             triggerRulesChangeEvent(true);
-        }
+        }*/
         emit NodeRemoved(
             removed,
-            enodeId,
-            host,
+            enodeHigh,
+            enodeLow,
+            ip,
             port
         );
 
@@ -135,8 +158,8 @@ contract NodeRules is NodeRulesProxy, NodeRulesList {
         return size();
     }
 
-    function triggerRulesChangeEvent(bool addsRestrictions) public {
-        nodeIngressContract.emitRulesChangeEvent(addsRestrictions);
+    function updateStorage_NodeRules(address _newNodeRules) public onlyAdmin returns (bool){
+        return _updateStorage_NodeRules(_newNodeRules);
     }
 
     function activateValidationEnodeIdOnly(bool _onlyUseEnodeId) external onlyAdmin onlyOnEditMode returns (bool) {

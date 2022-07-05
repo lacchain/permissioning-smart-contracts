@@ -1,5 +1,5 @@
 // Libs
-import React from 'react';
+import React,{useState,useMemo} from 'react';
 import PropTypes from 'prop-types';
 import { isAddress } from 'web3-utils';
 import idx from 'idx';
@@ -8,17 +8,23 @@ import { useAccountData } from '../../context/accountData';
 import { useAdminData } from '../../context/adminData';
 // Utils
 import useTab from './useTab';
+import useTransactionTab from './useTransactionTab';
 import { errorToast } from '../../util/tabTools';
 // Components
 import AccountTab from '../../components/AccountTab/AccountTab';
 import LoadingPage from '../../components/LoadingPage/LoadingPage';
 import NoContract from '../../components/Flashes/NoContract';
+
 // Constants
 import {
   PENDING_ADDITION,
   FAIL_ADDITION,
   PENDING_REMOVAL,
   FAIL_REMOVAL,
+  PENDING_CONFIRM,
+  FAIL_CONFIRM,
+  PENDING_REVOKE,
+  FAIL_REVOKE,
   SUCCESS,
   FAIL
 } from '../../constants/transactions';
@@ -29,26 +35,88 @@ type AccountTabContainerProps = {
 
 type Account = {
   address: string;
+  // isAccount:boolean;
+  // executed: boolean;
   identifier: string;
   status: string;
 };
 
 const AccountTabContainer: React.FC<AccountTabContainerProps> = ({ isOpen }) => {
+  const [inputSearch, setInputSearch] = useState('');
+const [search, setSearch] = useState("")
+
+const modifyInputSearch = ({ target: { value } }: { target: { value: string } }) => {
+ 
+  setInputSearch(value);
+ 
+};
+
+const handleSearch = (e: MouseEvent) => {
+  e.preventDefault();
+  setSearch(inputSearch)
+};
+
+const handleClear = (e: MouseEvent) => {
+  e.preventDefault();
+  setSearch("")
+  setInputSearch("")
+};
+
+
+
   const { isAdmin, dataReady: adminDataReady } = useAdminData();
-  const { allowlist, isReadOnly, dataReady, accountRulesContract } = useAccountData();
+  const { allowlist, allowTransactionlist, isReadOnly, dataReady, accountRulesContract } = useAccountData();
 
   const { list, modals, toggleModal, addTransaction, updateTransaction, deleteTransaction, openToast } = useTab(
     allowlist,
     (identifier: string) => ({ address: identifier })
   );
 
+  
+  const listFilter=useMemo(()=>  list.filter(row=> {
+   
+    return row.address.toUpperCase().includes(search.toUpperCase());
+  }
+  ),[search,list])
+
+  const { listTransaction} = useTransactionTab(
+    allowTransactionlist,
+    (identifier: string) => ({ address: identifier })
+  );
+
   if (!!accountRulesContract) {
-    const handleAdd = async (value: string) => {
+    const handleAdd = async (value: string, membresiaType: string) => {
+
+
+    let membresiaTypeValue = 1
+     switch (membresiaType) {
+      case 'Basic':
+        membresiaTypeValue=1
+   
+        break;
+      case 'Standard':
+        membresiaTypeValue=2
+     
+        break;
+      case 'Premium':
+        membresiaTypeValue=3
+      
+        break;
+
+      default:
+        membresiaTypeValue=1
+
+    }
+
       try {
-        const tx = await accountRulesContract!.functions.addAccount(value);
+       
+        const est = await accountRulesContract!.estimate.addAccount(value,membresiaTypeValue ,{ gasLimit:  300000 });
+        const tx = await accountRulesContract!.functions.addAccount(value,membresiaTypeValue,  { gasLimit: est.toNumber() + 300000 });
+    
         toggleModal('add')(false);
         addTransaction(value, PENDING_ADDITION);
         const receipt = await tx.wait(1); // wait on receipt confirmations
+     
         const addEvent = receipt.events!.filter(e => e.event && e.event === 'AccountAdded').pop();
         if (!addEvent) {
           openToast(value, FAIL, `Error while processing account: ${value}`);
@@ -74,8 +142,8 @@ const AccountTabContainer: React.FC<AccountTabContainerProps> = ({ isOpen }) => 
 
     const handleRemove = async (value: string) => {
       try {
-        const est = await accountRulesContract!.estimate.removeAccount(value);
-        const tx = await accountRulesContract!.functions.removeAccount(value, { gasLimit: est.toNumber() * 2 });
+        const est = await accountRulesContract!.estimate.removeAccount(value  ,{ gasLimit:  300000 });
+        const tx = await accountRulesContract!.functions.removeAccount(value, { gasLimit: est.toNumber() + 300000 });
         toggleModal('remove')(false);
         addTransaction(value, PENDING_REMOVAL);
         await tx.wait(1); // wait on receipt confirmations
@@ -90,6 +158,44 @@ const AccountTabContainer: React.FC<AccountTabContainerProps> = ({ isOpen }) => 
         );
       }
     };
+    const handleConfirm = async (value: number) => {
+      try {
+        const est = await accountRulesContract!.estimate.confirmTransaction(value  ,{ gasLimit:  300000 });
+        const tx = await accountRulesContract!.functions.confirmTransaction(value, { gasLimit: est.toNumber() + 300000 });
+        //toggleModal('add')(false);
+        addTransaction(value.toString(), PENDING_CONFIRM);
+        await tx.wait(1); // wait on receipt confirmations
+        openToast(value.toString(), SUCCESS, `Confirm of account processed: ${value}`);
+        deleteTransaction(value.toString());
+      } catch (e) {
+        console.log('error', e);
+       // toggleModal('add')(false);
+        updateTransaction(value.toString(), FAIL_CONFIRM);
+        errorToast(e, value.toString(), openToast, () =>
+          openToast(value.toString(), FAIL, 'Could not Confirm account', `${value} was unable to be Confirmend. Please try again.`)
+        );
+      }
+    };
+
+    const handleRevoke= async (value: number) => {
+      try {
+        const est = await accountRulesContract!.estimate.revokeConfirmation(value  ,{ gasLimit:  300000 });
+        const tx = await accountRulesContract!.functions.revokeConfirmation(value, { gasLimit: est.toNumber() + 300000 });
+       // toggleModal('remove')(false);
+        addTransaction(value.toString(), PENDING_REVOKE);
+        await tx.wait(1); // wait on receipt confirmations
+        openToast(value.toString(), SUCCESS, `Revoke of account processed: ${value}`);
+        deleteTransaction(value.toString());
+      } catch (e) {
+        console.log('error', e);
+        //toggleModal('remove')(false);
+        updateTransaction(value.toString(), FAIL_REVOKE);
+        errorToast(e, value.toString(), openToast, () =>
+          openToast(value.toString(), FAIL, 'Could not Revoke account', `${value} was unable to be Revoked. Please try again.`)
+        );
+      }
+    };
+
 
     const isValidAccount = (address: string) => {
       let isValidAddress = isAddress(address);
@@ -117,11 +223,18 @@ const AccountTabContainer: React.FC<AccountTabContainerProps> = ({ isOpen }) => 
     if (isOpen && allDataReady) {
       return (
         <AccountTab
-          list={list}
+        modifyInputSearch={modifyInputSearch}
+        inputSearch={inputSearch}
+        handleSearch={handleSearch}
+        handleClear={handleClear}
+          list={listFilter}
+          listTransaction={listTransaction}
           modals={modals}
           toggleModal={toggleModal}
           handleAdd={handleAdd}
           handleRemove={handleRemove}
+          handleConfirm={handleConfirm}
+          handleRevoke={handleRevoke}
           isAdmin={isAdmin}
           deleteTransaction={deleteTransaction}
           isValid={isValidAccount}

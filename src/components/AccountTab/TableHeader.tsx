@@ -1,27 +1,28 @@
 // Libs
 import React from 'react';
 import PropTypes from 'prop-types';
-import { Grid, Button, Icon, Typography } from '@material-ui/core';
+// Rimble Components
+import { Flex, Box, Heading, Button } from 'rimble-ui';
+//import { Grid, Button, Icon, Typography } from '@material-ui/core';
 
 type TableHeader = {
   number: Number;
   openAddModal: () => void;
   disabledAdd: boolean;
+  isAdmin: boolean;
 };
 
-const TableHeader: React.FC<TableHeader> = ({ number, openAddModal, disabledAdd }) => (
-  <Grid container alignItems="center" justifyContent="space-between">
-    <Typography variant="h2">Accounts ({number})</Typography>
-    <Button
-      variant="contained"
-      color="primary"
-      onClick={() => openAddModal()}
-      disabled={disabledAdd}
-      startIcon={<Icon>add_circle</Icon>}
-    >
-      Add Account
-    </Button>
-  </Grid>
+const TableHeader: React.FC<TableHeader> = ({  number, openAddModal, disabledAdd, isAdmin }) => (
+  <Flex alignItems="center" justifyContent="space-between">
+    <Box display="flex" alignItems="center">
+      <Heading.h2 fontWeight="700">Accounts ({isAdmin && number})</Heading.h2>
+    </Box>
+    <Flex alignItems="center">
+      <Button icon="AddCircleOutline" mainColor="#25D78F" onClick={() => openAddModal()} disabled={disabledAdd}>
+        Add Account
+      </Button>
+    </Flex>
+  </Flex>
 );
 
 TableHeader.propTypes = {

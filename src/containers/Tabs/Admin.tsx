@@ -7,6 +7,7 @@ import idx from 'idx';
 import { useAdminData } from '../../context/adminData';
 // Utils
 import useTab from './useTab';
+import useTransactionTab from './useTransactionTab';
 import { errorToast } from '../../util/tabTools';
 // Components
 import AdminTab from '../../components/AdminTab/AdminTab';
@@ -18,6 +19,10 @@ import {
   FAIL_ADDITION,
   PENDING_REMOVAL,
   FAIL_REMOVAL,
+  PENDING_CONFIRM,
+  FAIL_CONFIRM,
+  PENDING_REVOKE,
+  FAIL_REVOKE,
   SUCCESS,
   FAIL
 } from '../../constants/transactions';
@@ -33,32 +38,42 @@ type Admin = {
 };
 
 const AdminTabContainer: React.FC<AdminTabContainerProps> = ({ isOpen }) => {
-  const { admins, isAdmin, userAddress, dataReady, adminContract } = useAdminData();
+  const { admins, isAdmin, userAddress, dataReady, adminContract, allowTransactionlist } = useAdminData();
   const { list, modals, toggleModal, addTransaction, updateTransaction, deleteTransaction, openToast } = useTab(
     admins || [],
     (identifier: string) => ({ address: identifier })
   );
 
+  const { listTransaction } = useTransactionTab(allowTransactionlist, (identifier: string) => ({
+    address: identifier
+  }));
+
   if (!!adminContract) {
     const handleAdd = async (value: string) => {
       try {
-        const tx = await adminContract!.functions.addAdmin(value);
+        const est = await adminContract!.estimate.addAdmin(value ,  {
+          gasLimit:  300000
+        });
+        const tx = await adminContract!.functions.addAdmin(value  , { gasLimit: est.toNumber() +  300000});
         toggleModal('add')(false);
         addTransaction(value, PENDING_ADDITION);
         const receipt = await tx.wait(1); // wait on receipt confirmations
-        const addEvent = receipt.events!.filter(e => e.event && e.event === 'AdminAdded').pop();
+       // console.log(receipt.events)//Confirmation
+        const addEvent = receipt.events!.filter(e => e.event && e.event === 'Confirmation').pop();
         if (!addEvent) {
           openToast(value, FAIL, `Error while processing Admin account: ${value}`);
         } else {
           const addSuccessResult = idx(addEvent, _ => _.args[0]);
+          console.log()
           if (addSuccessResult === undefined) {
             openToast(value, FAIL, `Error while processing Admin account: ${value}`);
-          } else if (Boolean(addSuccessResult)) {
+          } else { //if (Boolean(addSuccessResult)) {
             openToast(value, SUCCESS, `New Admin account processed: ${value}`);
-          } else {
-            const message = idx(addEvent, _ => _.args[2]);
-            openToast(value, FAIL, message);
           }
+          // } else {
+          //   const message = idx(addEvent, _ => _.args[2]);
+          //   openToast(value, FAIL, message);
+          // }
         }
         deleteTransaction(value);
       } catch (e) {
@@ -72,8 +87,10 @@ const AdminTabContainer: React.FC<AdminTabContainerProps> = ({ isOpen }) => {
 
     const handleRemove = async (value: string) => {
       try {
-        const est = await adminContract!.estimate.removeAdmin(value);
-        const tx = await adminContract!.functions.removeAdmin(value, { gasLimit: est.toNumber() * 2 });
+        const est = await adminContract!.estimate.removeAdmin(value ,  {
+          gasLimit:  300000
+        });
+        const tx = await adminContract!.functions.removeAdmin(value, { gasLimit: est.toNumber() + 300000 });
         toggleModal('remove')(false);
         addTransaction(value, PENDING_REMOVAL);
         await tx.wait(1); // wait on receipt confirmations
@@ -88,6 +105,56 @@ const AdminTabContainer: React.FC<AdminTabContainerProps> = ({ isOpen }) => {
             FAIL,
             'Could not remove admin account',
             `${value} was unable to be removed. Please try again.`
+          )
+        );
+      }
+    };
+
+    const handleConfirm = async (value: number) => {
+      try {
+        const est = await adminContract!.estimate.confirmTransaction(value , {
+          gasLimit:  300000
+        });
+        const tx = await adminContract!.functions.confirmTransaction(value, { gasLimit: est.toNumber() + 300000 });
+        //toggleModal('add')(false);
+        addTransaction(value.toString(), PENDING_CONFIRM);
+        await tx.wait(1); // wait on receipt confirmations
+        openToast(value.toString(), SUCCESS, `Confirm of account processed: ${value}`);
+        deleteTransaction(value.toString());
+      } catch (e) {
+        console.log('error', e);
+        // toggleModal('add')(false);
+        updateTransaction(value.toString(), FAIL_CONFIRM);
+        errorToast(e, value.toString(), openToast, () =>
+          openToast(
+            value.toString(),
+            FAIL,
+            'Could not Confirm account',
+            `${value} was unable to be Confirmend. Please try again.`
+          )
+        );
+      }
+    };
+
+    const handleRevoke = async (value: number) => {
+      try {
+        const est = await adminContract!.estimate.revokeConfirmation(value);
+        const tx = await adminContract!.functions.revokeConfirmation(value, { gasLimit: est.toNumber() + 300000 });
+        // toggleModal('remove')(false);
+        addTransaction(value.toString(), PENDING_REVOKE);
+        await tx.wait(1); // wait on receipt confirmations
+        openToast(value.toString(), SUCCESS, `Revoke of account processed: ${value}`);
+        deleteTransaction(value.toString());
+      } catch (e) {
+        console.log('error', e);
+        //toggleModal('remove')(false);
+        updateTransaction(value.toString(), FAIL_REVOKE);
+        errorToast(e, value.toString(), openToast, () =>
+          openToast(
+            value.toString(),
+            FAIL,
+            'Could not Revoke account',
+            `${value} was unable to be Revoked. Please try again.`
           )
         );
       }
@@ -118,11 +185,14 @@ const AdminTabContainer: React.FC<AdminTabContainerProps> = ({ isOpen }) => {
       return (
         <AdminTab
           list={list}
+          listTransaction={listTransaction}
           userAddress={userAddress}
           modals={modals}
           toggleModal={toggleModal}
           handleAdd={handleAdd}
           handleRemove={handleRemove}
+          handleConfirm={handleConfirm}
+          handleRevoke={handleRevoke}
           isAdmin={isAdmin}
           deleteTransaction={deleteTransaction}
           isValid={isValidAdmin}
