@@ -50,7 +50,7 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
  const [searchType, setSearchType] = useState("")
  const [searchOrganization, setSearchOrganization] = useState("")
  const [inputSearchOrganization, setInputSearchOrganization] = useState('');
- 
+
  const modifySelectType = ({ target: { value } }: { target: { value: string } }) => {
   setSelectTypeSearch(value);
  };
@@ -63,7 +63,7 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
     switch (value) {
     case 'Bootnode':
       nodeTypeValue="0"
-    
+
       break;
     case 'Validator':
       nodeTypeValue="1"
@@ -79,7 +79,7 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
       break;
     default:
       nodeTypeValue=""
-  
+
   }
   return nodeTypeValue
  }
@@ -88,7 +88,7 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
    setSearchType(selectTypeSearch)
    setSearchOrganization(inputSearchOrganization)
  };
- 
+
  const handleClear = (e: MouseEvent) => {
    e.preventDefault();
    setSearchType("")
@@ -97,8 +97,9 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
    setInputSearchOrganization("")
  };
 
-  const { isAdmin, dataReady: adminDataReady } = useAdminData();
-  const { allowlist,allowlistTransacion, isReadOnly, dataReady, nodeRulesContract } = useNodeData();
+  const { isAdmin, dataReady: adminDataReady } =  useAdminData();
+
+  const { allowlist,allowlistTransacion,allowApprovedlist, isReadOnly, dataReady, nodeRulesContract } = useNodeData(isAdmin);
 
   const { list, modals, toggleModal, addTransaction, updateTransaction, deleteTransaction, openToast } = useTab(
     allowlist,
@@ -109,32 +110,55 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
     identifierToParamsTransaction
   );
 
+
+  const permisionStatus=(idNode:String)=>{
+    let HOST = process.env.REACT_APP_HOST_BACK_OFFICE
+    let accessToken=process.env.REACT_APP_TOKEN_BACK_OFFICE
+
+          const url = `${HOST}/node/${idNode}/permission`;
+            console.log(accessToken)
+            const params = {
+              method: "PUT",
+              headers: {
+                  Authorization: `Bearer ${accessToken}`
+              }
+          };
+            const fetchPromise =  fetch( url,params);
+            fetchPromise.then(response => {
+              //console.log(response);
+              return response
+            }).then(node => {
+
+              console.log(node)
+
+            });
+  }
   const listFilter=useMemo(()=>  list.filter(row=> {
     //  return  row.organization .toString().includes(searchOrganization) || row.ip.includes( searchOrganization ) ;
     if (searchType===""){
       const {enodeHigh} = enodeToParams(searchOrganization)
       if (enodeHigh===""){
-        return  row.organization.toString().includes(searchOrganization) 
+        return  row.organization.toString().includes(searchOrganization)
       || hexToIp(row.ip).includes( searchOrganization ) ;
       }else{
         return    row.enodeHigh.includes(enodeHigh);
       }
-      
+
     }else if (searchOrganization===""){
       return row.nodeType.toString().includes(getType(searchType)  ) ;
     }else{
       const {enodeHigh} = enodeToParams(searchOrganization)
       if (enodeHigh===""){
-        return row.nodeType.toString().includes(getType(searchType)  ) 
+        return row.nodeType.toString().includes(getType(searchType)  )
         && (row.organization.toString().includes(searchOrganization )  || hexToIp(row.ip).includes( searchOrganization )  );
       }else{
-        return row.nodeType.toString().includes(getType(searchType)  ) 
+        return row.nodeType.toString().includes(getType(searchType)  )
         && (  row.enodeHigh.includes(enodeHigh));
-      }   
-    } 
+      }
+    }
   }
   ),[searchType,searchOrganization,list]);
-  
+
   if (!!nodeRulesContract) {
     const handleAdd = async (enode:string,nodeType:string, nodeName:string,nodeOrganization:string, nodeGeoHash:string , nodeDid:string) => {
      //const { enode, type, organization, name, did, group } = value;
@@ -165,7 +189,7 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
 
     const { enodeHigh, enodeLow, ip, port} = enodeToParams(enode);
     //const geoHash ="0x00646a6e3431" //await getGeohash(ip);
-    
+
       const identifier = paramsToIdentifier({
         enodeHigh,
         enodeLow,
@@ -196,18 +220,18 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
           nodeDid,
           group
         );
-      
+
         toggleModal('add')(false);
         addTransaction(identifier, PENDING_ADDITION);
         const receipt = await tx.wait(3); // wait on receipt confirmations
-      
+
        // const addEvent = receipt.events!.filter(e => e.event && e.event === 'NodeAdded').pop();
         const addEvent = receipt.events!.filter(e => e.event && e.event === 'TransactionAdded').pop();
         if (!addEvent) {
           openToast(enode, FAIL, `Error while processing node: ${enode}`);
         } else {
           const addSuccessResult = idx(addEvent, _ => _.args[0]);
-          
+
           if (addSuccessResult === undefined) {
             openToast(enode, FAIL, `Error while adding node: ${enode}`);
           }else{ //else if (Boolean(addSuccessResult)) {
@@ -273,10 +297,10 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
       }
     };
     const handleConfirm = async (value: number) => {
-      
+
       try {
         const est = await nodeRulesContract!.estimate.confirmTransaction(value);
-        
+
         const tx = await nodeRulesContract!.functions.confirmTransaction(
           value,
           {
@@ -302,8 +326,113 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
         );
       }
     };
+    const handleApproved = async (row: number) => {
+
+      console.log("Row: ", row);
+     let node = allowApprovedlist[row]
+      let enode:string  = node.enode;
+      let nodeType:string =  node.nodeType;
+      let  nodeName:string = node.name;
+      let nodeOrganization:string = node.organization;
+      let nodeGeoHash:string ="0x00646a6e3431";
+      let nodeDid:string="NA";
+
+     let group = ""
+     let nodeTypeValue = 0
+     switch (nodeType) {
+      case 'Bootnode':
+        nodeTypeValue=0
+        group="0x5B950E77941D01CDF246D00B1ECE546BC95234B77D98B44C9187E2733AFA696A"
+        break;
+      case 'Validator':
+        nodeTypeValue=1
+        group="0xDAE96FC0046A5AE1864D9A66E6715DA8DA08240E7119816AB722261C0744D8E8"
+        break;
+      case 'Writer':
+        nodeTypeValue=2
+        group="0x4BB48E76F19DE6EBED7D59D46800508030AECEA46BA56BD19855D94473E28BC0"
+        break;
+      case 'Observer':
+        nodeTypeValue=3
+        group=""
+        break;
+      default:
+        nodeTypeValue=0
+        group=""
+    }
+
+    const { enodeHigh, enodeLow, ip, port} = enodeToParams(enode);
+    //const geoHash ="0x00646a6e3431" //await getGeohash(ip);
+
+      const identifier = paramsToIdentifier({
+        enodeHigh,
+        enodeLow,
+        ip,
+        port,
+        nodeType: nodeTypeValue,
+        geoHash:nodeGeoHash,
+        name:nodeName,
+        organization:nodeOrganization,
+        did:nodeDid,
+        group
+      });
+
+      try {
+        // console.log("nodeName:" +nodeName )
+        // console.log("nodeOrganization:" +nodeOrganization )
+        const tx = await nodeRulesContract!.functions.addEnode(
+          utils.hexlify(enodeHigh),
+          utils.hexlify(enodeLow),
+          utils.hexlify(ip),
+          utils.bigNumberify(port),
+          // @ts-ignore
+         // utils.hexlify(types[nodeType]),
+         nodeTypeValue,
+         nodeGeoHash,
+          nodeName,
+          nodeOrganization,
+          nodeDid,
+          group
+        );
+
+
+        addTransaction(identifier, PENDING_ADDITION);
+        const receipt = await tx.wait(3); // wait on receipt confirmations
+
+        const addEvent = receipt.events!.filter(e => e.event && e.event === 'TransactionAdded').pop();
+        if (!addEvent) {
+          openToast(enode, FAIL, `Error while processing node: ${enode}`);
+        } else {
+          const addSuccessResult = idx(addEvent, _ => _.args[0]);
+
+          if (addSuccessResult === undefined) {
+            openToast(enode, FAIL, `Error while adding node: ${enode}`);
+          }else{ //else if (Boolean(addSuccessResult)) {
+            openToast(enode, SUCCESS, `New node added: ${enode}`);
+            console.log(node.id);
+            ///Aqui llamar funcion
+            console.log("=========================================permisionStatus")
+            permisionStatus(node.id);
+          }
+
+        }
+        deleteTransaction(identifier);
+      } catch (e) {
+        console.log(e)
+        updateTransaction(identifier, FAIL_ADDITION);
+        errorToast(e, identifier, openToast, () =>
+          openToast(
+            identifier,
+            FAIL,
+            'Could not add node',
+            `${enodeHigh}${enodeLow} was unable to be added. Please try again`
+          )
+        );
+      }
+
+    }
     const handleRevoke = async (value: number) => {
-      
+
       try {
         const est = await nodeRulesContract!.estimate.revokeConfirmation(value);
         const tx = await nodeRulesContract!.functions.revokeConfirmation(
@@ -333,11 +462,11 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
 
     const isDuplicateEnode = (enode: string) => {
       //return list.filter((item: Enode) => isEqual(item, enodeToParams(enode))).length > 0;
-      let lat =list.filter((item: Enode) =>{ 
+      let lat =list.filter((item: Enode) =>{
        let newT= enodeToParams(enode)
         return (item.enodeHigh=== newT.enodeHigh && item.enodeLow===newT.enodeLow && item.ip=== newT.ip )
       }).length > 0;
-     
+
       return lat
     };
 
@@ -370,12 +499,14 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
         modifyInputSearchOrganization={modifyInputSearchOrganization}
           list={listFilter}
           listTransaction={listTransaction}
+          listApproved={allowApprovedlist}
           modals={modals}
           toggleModal={toggleModal}
           handleAdd={handleAdd}
           handleRemove={handleRemove}
           handleConfirm={handleConfirm}
           handleRevoke={handleRevoke}
+          handleApproved={handleApproved}
           isAdmin={isAdmin}
           deleteTransaction={deleteTransaction}
           isValid={isValid}

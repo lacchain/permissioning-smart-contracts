@@ -4,18 +4,23 @@ import { NodeRules } from '../chain/@types/NodeRules';
 import { nodeRulesFactory } from '../chain/contracts/NodeRules';
 import { useNetwork } from './network';
 import { ethers } from 'ethers';
+
+
 // Utils
-import { paramsToIdentifier,paramsToIdentifierTransaction, Enode as RawEnode , EnodeTransaction as RawEnodeTransaction } from '../util/enodetools';
+import { paramsToIdentifier,paramsToIdentifierTransaction, Enode as RawEnode , EnodeTransaction as RawEnodeTransaction, EnodeApprobe  as RawEnodeApprobe} from '../util/enodetools';
 
 type Enode = RawEnode & { identifier: string };
 type EnodeTransacion = RawEnodeTransaction & { identifier: string };
-//type Enode = RawEnode & { identifier: string , executed:boolean , transactionId:number};
+type EnodeApprobe = RawEnodeApprobe & { identifier: string };
 type ContextType =
   | {
       nodeList: Enode[];
       nodeTransactionList: EnodeTransacion[];
+      nodeApprovedList: EnodeApprobe[];
       setNodeList: React.Dispatch<React.SetStateAction<Enode[]>>;
       setNodeTransactionList: React.Dispatch<React.SetStateAction<EnodeTransacion[]>>;
+      setNodeApprovedList: React.Dispatch<React.SetStateAction<EnodeApprobe[]>>;
+
       nodeReadOnly?: boolean;
       setNodeReadOnly: React.Dispatch<React.SetStateAction<boolean | undefined>>;
       nodeRulesContract?: NodeRules;
@@ -25,26 +30,78 @@ type ContextType =
 
 const DataContext = createContext<ContextType>(undefined);
 const AbiCoder =ethers.utils.defaultAbiCoder
+const HOST = process.env.REACT_APP_HOST_BACK_OFFICE
+var isAdmin: boolean;
+
+const loadNodesApproved=(
+  setNodeApprovedList: (node: EnodeApprobe[]) => void,
+)=>{
+
+          let accessToken=process.env.REACT_APP_TOKEN_BACK_OFFICE
+          let networkId = process.env.REACT_APP_NETWORK_ID
+          const url = HOST+"/node?status=APPROVED&networkId="+networkId;
+            const params = {
+              method: "GET",
+              headers: {
+                  Authorization: `Bearer ${accessToken}`
+              }
+          };
+          console.log(url)
+            const fetchPromise =  fetch( url,params);
+            fetchPromise.then(response => {
+              //console.log(response);
+              return response.json()
+            }).then(nodes => {
+              if (nodes ){
+                const approveddNodeList = nodes.map((node: any) => {
+
+
+                  let enode = "enode://"+ node.enode.substring(2) + "@"+node.ipAddress  + ":"+node.portp2p;
+
+                return{
+                  id: node._id,
+                  nodeType :node.type,
+                  name:node.nodeNameEthstats,
+                  organization: node.entity,
+                  enode: "enode://"+ node.enode.substring(2) + "@"+node.ipAddress  + ":"+node.portp2p
+                }
+                });
+
+                setNodeApprovedList(approveddNodeList);
+              }else{
+                setNodeApprovedList([])
+              }
+            }).catch(
+              (error) => {
+                console.error(error);
+              }
+            );
+  //APPROVED
+
+}
 const loadNodeData = (
   nodeRulesContract: NodeRules | undefined,
 
   setNodeList: (node: Enode[]) => void,
   setNodeTransactionList: (node: EnodeTransacion[]) => void,
+
   setNodeReadOnly: (readOnly?: boolean) => void
 ) => {
+ console.log("loadNodeData")
   if (nodeRulesContract === undefined ) {
     setNodeList([]);
     setNodeTransactionList([]);
     setNodeReadOnly(undefined);
   } else {
     nodeRulesContract.functions.isReadOnly().then(isReadOnly => setNodeReadOnly(isReadOnly));
-    
+
     nodeRulesContract.functions.getSize().then(listSize => {
       const listElementPromises = [];
       for (let i = 0; listSize.gt(i); i++) {
         listElementPromises.push(nodeRulesContract.functions.getByIndex(i));
       }
       Promise.all(listElementPromises).then(responses => {
+
         const updatedNodeList = responses.map(r => {
           const withStringyPort = { ...r, port: r.port.toString() };
           return {
@@ -55,27 +112,27 @@ const loadNodeData = (
         setNodeList(updatedNodeList);
       });
     });
-  
+
     nodeRulesContract.functions.getTransactionCount(true,false).then(countTransaction =>{
      // console.log("countTransaction:"+countTransaction)
       nodeRulesContract.functions.getTransactionIds(0,countTransaction,true,false).then(listTransaction=>{
           const listElementsPromisesTransaction = [];
-          console.log(listTransaction.length)
+
           for (let i = 0; i< listTransaction.length; i++) {
             console.log(listTransaction[i].toNumber())
             if (listTransaction[i].toNumber() >=0){
-           //   console.log("id-transacion-"+listTransaction[i])
+              console.log("id-transacion-"+listTransaction[i])
               listElementsPromisesTransaction.push(nodeRulesContract.functions.getTransaction(listTransaction[i]));
             }
           }
-          
+
           Promise.all(listElementsPromisesTransaction).then(responses => {
             const updatedNodeList = responses.map(r => {
                   const payload = r[0]
                   const executed= r[1]
                   const transactionID = r[2]
                   const nameFunc = payload.slice(2,10);
-                  console.log(nameFunc)
+                  console.log(nameFunc)//"73ac6f8f"
                   let  withStringyPort={enodeHigh: "",
                     enodeLow: "",
                     ip: "",
@@ -92,7 +149,7 @@ const loadNodeData = (
 
                   if (nameFunc ==="2444b823"){//remove
                     const   decode= AbiCoder.decode([  "bytes32","bytes32","bytes16","uint16"],"0x"+ payload.slice(10,payload.length));
-                     withStringyPort = {         
+                     withStringyPort = {
                       enodeHigh: decode[0],
                       enodeLow: decode[1],
                       ip: decode[2],
@@ -108,7 +165,7 @@ const loadNodeData = (
                        };
                   }else if (nameFunc ==="afe76f5c"){
                     const decode= AbiCoder.decode([  "bytes32","bytes32","bytes16","uint16","uint8","bytes6","string","string","string","bytes32"],"0x"+ payload.slice(10,payload.length));
-                       withStringyPort = {         
+                       withStringyPort = {
                         enodeHigh: decode[0],
                         enodeLow: decode[1],
                         ip: decode[2],
@@ -122,18 +179,18 @@ const loadNodeData = (
                         executed:executed ,
                         transactionId:transactionID.toNumber()
                         };
-                        
+
                   }
                 return {
                   ...withStringyPort,
                   identifier: paramsToIdentifierTransaction(withStringyPort)
                 };
                 });
-                    
+
                 setNodeTransactionList(updatedNodeList);
-            
+
           });
-          
+
       });
     });
 
@@ -150,12 +207,14 @@ const loadNodeData = (
 export const NodeDataProvider: React.FC<{}> = props => {
   const [nodeList, setNodeList] = useState<Enode[]>([]);
   const [nodeTransactionList, setNodeTransactionList] = useState<EnodeTransacion[]>([]);
+  const [nodeApprovedList, setNodeApprovedList] = useState<EnodeApprobe[]>([]);
+
   const [nodeReadOnly, setNodeReadOnly] = useState<boolean | undefined>(undefined);
   const [nodeRulesContract, setNodeRulesContract] = useState<NodeRules | undefined>(undefined);
 
   const value = useMemo(
-    () => ({ nodeList, setNodeList,nodeTransactionList, setNodeTransactionList, nodeReadOnly, setNodeReadOnly, nodeRulesContract, setNodeRulesContract }),
-    [nodeList, setNodeList,nodeTransactionList, setNodeTransactionList, nodeReadOnly, setNodeReadOnly, nodeRulesContract, setNodeRulesContract]
+    () => ({ nodeList, setNodeList,nodeTransactionList, nodeApprovedList, setNodeTransactionList, setNodeApprovedList, nodeReadOnly, setNodeReadOnly, nodeRulesContract, setNodeRulesContract }),
+    [nodeList, setNodeList,nodeTransactionList,nodeApprovedList, setNodeTransactionList, setNodeApprovedList,nodeReadOnly, setNodeReadOnly, nodeRulesContract, setNodeRulesContract]
   );
 
   const { nodeIngressContract } = useNetwork();
@@ -164,7 +223,7 @@ export const NodeDataProvider: React.FC<{}> = props => {
     if (nodeIngressContract === undefined) {
       setNodeRulesContract(undefined);
     } else {
-      
+
         nodeRulesFactory(nodeIngressContract).then(contract => {
           setNodeRulesContract(contract);
 
@@ -173,24 +232,42 @@ export const NodeDataProvider: React.FC<{}> = props => {
             contract.removeAllListeners('NodeRemoved');
             contract.removeAllListeners('Confirmation');
             contract.removeAllListeners('Revocation');
-            
-            
-            
+
+
+
             contract.on('TransactionAdded', () => {
+              console.log("TransactionAdded")
               loadNodeData(contract, setNodeList,setNodeTransactionList, setNodeReadOnly);
+              setTimeout(() =>
+              {
+                isAdmin && loadNodesApproved(setNodeApprovedList);
+              },
+            5000);
             });
             contract.on('NodeRemoved', () => {
+              console.log("NodeRemoved")
               loadNodeData(contract,setNodeList, setNodeTransactionList,setNodeReadOnly);
+              isAdmin && loadNodesApproved(setNodeApprovedList);
             });
             contract.on('Confirmation', () => {
+              console.log("Confirmation")
               loadNodeData(contract,setNodeList, setNodeTransactionList,setNodeReadOnly);
+              setTimeout(() =>
+              {
+                isAdmin && loadNodesApproved(setNodeApprovedList);
+              },
+            5000);
+
+
             });
             contract.on('Revocation', () => {
+              console.log("Revocation")
               loadNodeData(contract,setNodeList, setNodeTransactionList,setNodeReadOnly);
+              isAdmin && loadNodesApproved(setNodeApprovedList);
             });
 
-    
-            
+
+
         });
 
 
@@ -209,16 +286,29 @@ export const NodeDataProvider: React.FC<{}> = props => {
  *  - isReadOnly: Node contract is lock or unlock,
  *  - allowlist: list of permitted nodes from Node contract,
  */
-export const useNodeData = () => {
+export const useNodeData = (_isAdmin:boolean) => {
+
+  isAdmin=_isAdmin;
+
   const context = useContext(DataContext);
   if (!context) {
     throw new Error('useNodeData must be used within a NodeDataProvider.');
   }
 
-  const { nodeList, setNodeList, nodeTransactionList, setNodeTransactionList,nodeReadOnly, setNodeReadOnly, nodeRulesContract } = context;
+  const { nodeList, setNodeList, nodeTransactionList, setNodeTransactionList,nodeApprovedList,setNodeApprovedList,nodeReadOnly, setNodeReadOnly, nodeRulesContract } = context;
+
 
   useEffect(() => {
-    loadNodeData(nodeRulesContract, setNodeList,setNodeTransactionList, setNodeReadOnly);
+    setTimeout(() =>
+  {
+
+    isAdmin && loadNodesApproved(setNodeApprovedList);
+      loadNodeData(nodeRulesContract, setNodeList,setNodeTransactionList, setNodeReadOnly);
+  },
+3000);
+
+
+
   }, [nodeRulesContract, setNodeList,setNodeTransactionList, setNodeReadOnly]);
 
   const formattedNodeList = useMemo(() => {
@@ -230,12 +320,13 @@ export const useNodeData = () => {
   }, [nodeTransactionList]);
 
   const dataReady = useMemo(() => {
-    return nodeRulesContract !== undefined && nodeReadOnly !== undefined && nodeList !== undefined  && nodeTransactionList !== undefined; 
+    return nodeRulesContract !== undefined && nodeReadOnly !== undefined && nodeList !== undefined  && nodeTransactionList !== undefined;
   }, [nodeRulesContract, nodeReadOnly, nodeList,nodeTransactionList]);
 
   return {
     dataReady,
     allowlist: formattedNodeList,
+    allowApprovedlist:nodeApprovedList,
     allowlistTransacion: formattedNodeTransactionList,
     isReadOnly: nodeReadOnly,
     nodeRulesContract

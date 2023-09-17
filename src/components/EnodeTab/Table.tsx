@@ -7,20 +7,25 @@ import { Table, Box,Flex,Button, Form ,Select } from 'rimble-ui';
 // Components
 import EnodeTableHeader from './TableHeader';
 import EnodeTableTransactionHeader from './TableTransactionHeader';
+import EnodeTableApprovednHeader from './TableApprovedHeader';
 import EnodeRow from './Row';
 import EnodeRowTransaction from './RowTransaction';
+import EnodeRowApprove from './RowApproved';
 import EmptyRow from './EmptyRow';
+import { EnodeApprobe } from '../../util/enodetools';
 // Styles
 import styles from './styles.module.scss';
 import { Enode } from '../../util/enodetools';
 
 type EnodeTable = {
+  listApproved: (EnodeApprobe)[];
   list: (Enode & { identifier: string; status: string } )[];
   listTransaction: (Enode & { identifier: string; status: string ; executed:boolean; transactionId:number} )[];
   toggleModal: (name: 'add' | 'remove' | 'lock') => (value?: boolean | string) => void;
   deleteTransaction: (identifier: string) => void;
   handleConfirm: (identifier: number) => void;
   handleRevoke: (identifier: number) => void;
+  handleApproved: (row: number) => void;
   isAdmin: boolean;
   isReadOnly: boolean;
   modifySelectType: (input: { target: { value: string } }) => void;
@@ -31,8 +36,41 @@ type EnodeTable = {
   handleClear: (e: MouseEvent) => void;
 };
 
-const EnodeTable: React.FC<EnodeTable> = ({inputSearchOrganization,modifyInputSearchOrganization,modifySelectType,selectTypeSearch,handleSearch, handleClear, list, listTransaction,toggleModal, deleteTransaction,  handleConfirm,handleRevoke,isAdmin }) => (
+const EnodeTable: React.FC<EnodeTable> = ({inputSearchOrganization,modifyInputSearchOrganization,modifySelectType,selectTypeSearch,handleSearch, handleClear, list, listTransaction,listApproved,toggleModal, deleteTransaction,  handleConfirm,handleRevoke,handleApproved,isAdmin }) => (
   <Box mt={5}>
+
+
+    <EnodeTableApprovednHeader number={listApproved.length} isAdmin={isAdmin}  />
+    <Table mt={4}>
+      <thead>
+      <tr>
+        <th className={styles.headerCell}>Type</th>
+        <th className={styles.headerCell}>Node Name</th>
+        <th className={styles.headerCell}>Organization</th>
+        <th className={styles.headerCell}>enode</th>
+
+        </tr>
+      </thead>
+      <tbody>
+        {listApproved.map((node , index)=> (
+          isAdmin && <EnodeRowApprove
+          key={node.id}
+
+          index={index}
+          isAdmin={isAdmin}
+          enode={node.enode}
+          name={node.name}
+          organization={node.organization}
+          nodeType={node.nodeType}
+          handleApproved={handleApproved}
+          />
+        ))}
+        {list.length === 0 && <EmptyRow />}
+      </tbody>
+    </Table>
+
+
+
     <EnodeTableTransactionHeader number={listTransaction.length} isAdmin={isAdmin}  />
     <Table mt={4}>
       <thead>
@@ -66,8 +104,8 @@ const EnodeTable: React.FC<EnodeTable> = ({inputSearchOrganization,modifyInputSe
     <br/>
     <br/>
     <Flex alignItems="center" justifyContent="space-between">
-     
-         
+
+
             <Select
               name="type"
               items={['ALL','Bootnode', 'Validator', 'Writer', 'Observer']}
@@ -95,7 +133,7 @@ const EnodeTable: React.FC<EnodeTable> = ({inputSearchOrganization,modifyInputSe
             hovercolor="#25D78F"
             border={1}
             onClick={handleSearch}
-     
+
           >
           Search
           </Button>
@@ -107,7 +145,7 @@ const EnodeTable: React.FC<EnodeTable> = ({inputSearchOrganization,modifyInputSe
             hovercolor="#25D78F"
             border={1}
             onClick={handleClear}
-     
+
           >
           Clear
           </Button>
