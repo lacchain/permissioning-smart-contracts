@@ -78,7 +78,7 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
 
       break;
     default:
-      nodeTypeValue=""
+      nodeTypeValue="4"
 
   }
   return nodeTypeValue
@@ -164,7 +164,7 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
      //const { enode, type, organization, name, did, group } = value;
      // const { enodeHigh, enodeLow, ip, port } = enodeToParams(enode);
      let group = ""
-     let nodeTypeValue = 0
+     let nodeTypeValue = 4
      switch (nodeType) {
       case 'Bootnode':
         nodeTypeValue=0
@@ -183,7 +183,7 @@ const EnodeTabContainer: React.FC<EnodeTabContainerProps> = ({ isOpen }) => {
         group=""
         break;
       default:
-        nodeTypeValue=0
+        nodeTypeValue=4
         group=""
     }
 

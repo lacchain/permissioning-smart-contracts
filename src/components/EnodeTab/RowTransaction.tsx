@@ -38,7 +38,7 @@ type EnodeRow = {
 const EnodeRow: React.FC<EnodeRow> = ({
   isAdmin,
   deleteTransaction,
-  handleConfirm, 
+  handleConfirm,
   handleRevoke,
   openRemoveModal,
   enodeHigh,
@@ -53,7 +53,7 @@ const EnodeRow: React.FC<EnodeRow> = ({
   status,
   identifier,
   transactionId,
-  
+
 }) => (
   <tr className={styles.row}>
     <td>
@@ -61,7 +61,8 @@ const EnodeRow: React.FC<EnodeRow> = ({
         <TextWithTooltip
           isAdmin={isAdmin}
           status={status}
-          text={`${['Bootnode', 'Validator', 'Writer', 'Observer'][nodeType]}`}
+
+          text={`${['Bootnode', 'Validator', 'Writer', 'Observer',''][nodeType]}`}
         />
       </Flex>
     </td>
@@ -140,9 +141,9 @@ const EnodeRow: React.FC<EnodeRow> = ({
     <Flex alignItems="center">
     {isAdmin && status === 'pendingAddition' && (
       <Button icon="CheckCircle" size="medium" mainColor="#25D78F" onClick={() => handleConfirm(transactionId)} isAdmin={isAdmin}>
-        Confirm 
+        Confirm
       </Button>
-   
+
     )}
      </Flex>
     </td>
@@ -154,7 +155,7 @@ const EnodeRow: React.FC<EnodeRow> = ({
       </Button>
     )}
     </Flex>
-    
+
     </td>
 
   </tr>

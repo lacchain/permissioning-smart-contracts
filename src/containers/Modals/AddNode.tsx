@@ -15,8 +15,8 @@ const AddModalContainer: React.FC<{
   display: ModalDisplay;
 }> = ({ isOpen, closeModal, handleAdd, isValid, display }) => {
   const [enode, setEnode] = useState("");
-  
-  const [nodeType, setNodeType] = useState("Bootnode");
+
+  const [nodeType, setNodeType] = useState("");
   const [nodeName, setNodeName] = useState("");
   const [nodeOrganization, setNodeOrganization] = useState("");
   const [nodeDid, setNodeDid] = useState("");
@@ -35,7 +35,7 @@ const AddModalContainer: React.FC<{
     setNodeType(value);
     setValidation(validation);
   };
- 
+
 
   const modifyNodeName = ({ target: { value } }: { target: { value: string , } }) => {
    // const validation = isValid(value);
@@ -48,7 +48,7 @@ const AddModalContainer: React.FC<{
     setNodeOrganization(value);
    // setValidation(validation);
   };
- 
+
   const modifyNodeDid = ({ target: { value } }: { target: { value: string , } }) => {
     // const validation = isValid(value);
     setNodeDid(value);
