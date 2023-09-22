@@ -242,7 +242,7 @@ export const NodeDataProvider: React.FC<{}> = props => {
               {
                 isAdmin && loadNodesApproved(setNodeApprovedList);
               },
-            5000);
+            3000);
             });
             contract.on('NodeRemoved', () => {
               console.log("NodeRemoved")
@@ -256,7 +256,7 @@ export const NodeDataProvider: React.FC<{}> = props => {
               {
                 isAdmin && loadNodesApproved(setNodeApprovedList);
               },
-            5000);
+            3000);
 
 
             });
