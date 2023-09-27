@@ -29,8 +29,8 @@ const loadConfig = async (): Promise<Config> => {
     let nodeIngressAddress = process.env.REACT_APP_NODE_INGRESS_CONTRACT_ADDRESS;
     let networkId = process.env.REACT_APP_CHAIN_ID;
     let hostOffice = process.env.REACT_APP_HOST_BACK_OFFICE;
-    console.log(hostOffice)
-    console.log(networkId)
+    console.log('config loader', hostOffice);
+    console.log('config loader', networkId);
     if (accountIngressAddress) {
       console.log('Using environment variables for contract addresses and network id');
       //make sure other two are also defined
