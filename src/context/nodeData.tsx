@@ -41,7 +41,7 @@ var isAdmin: boolean;
 const loadNodesApproved = (setNodeApprovedList: (node: EnodeApprobe[]) => void) => {
   let accessToken = process.env.REACT_APP_TOKEN_BACK_OFFICE;
   let networkId = process.env.REACT_APP_CHAIN_ID;
-  console.log();
+  console.log(networkId);
   const url = HOST + '/node?status=APPROVED&networkId=' + networkId;
   console.log('url', url);
   const params = {

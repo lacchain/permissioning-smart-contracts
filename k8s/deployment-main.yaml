@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: ms-permission-main-dapps
-          image: edumar111/lacchain-dapps:2.0.0
+          image: edumar111/lacchain-dapps:2.0.6
           imagePullPolicy: Always
           resources:
             requests:
@@ -36,8 +36,20 @@ spec:
               memory: "512Mi"
               cpu: "500m"
           env:
+            - name: NODE_ENV
+              value: ms-mongo-service-svc
             - name: MONGO_HOST
               value: ms-mongo-service-svc
+            - name: CHAIN_ID
+              value: "648541"
+            - name: BESU_NODE_PERM_ENDPOINT
+              value: http://34.73.228.200:4545
+            - name: ACCOUNT_INGRESS_CONTRACT_ADDRESS
+              value: "0x0000000000000000000000000000000000008888"
+            - name: NODE_INGRESS_CONTRACT_ADDRESS
+              value: "0x0000000000000000000000000000000000009999"
+            - name: HOST_BACK_OFFICE
+              value: https://api.backoffice.lac-net.net
           ports:
             - containerPort: 80
               name: http
