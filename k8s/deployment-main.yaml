@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-permission-main-dapps
+  namespace: permission-dapps
+  labels:
+    app-code: ms-permission-main-dapps
+    app-role: domain
+    app-group: frontend
+    app-plattform: backoffice-nodes
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app-code: ms-permission-main-dapps
+  strategy:
+    rollingUpdate:
+      maxSurge: 25% #porcentajee de pod nuevos en el despliegue (new version)
+      maxUnavailable: 25% #porcentanje de pod que elimina en el despliegue (old version)
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app-code: ms-permission-main-dapps
+    spec:
+      containers:
+        - name: ms-permission-main-dapps
+          image: edumar111/lacchain-dapps:2.0.7
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "50m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          env:
+            - name: NODE_ENV
+              value: ms-mongo-service-svc
+            - name: MONGO_HOST
+              value: ms-mongo-service-svc
+            - name: CHAIN_ID
+              value: "648541"
+            - name: BESU_NODE_PERM_ENDPOINT
+              value: http://34.73.228.200:4545
+            - name: ACCOUNT_INGRESS_CONTRACT_ADDRESS
+              value: "0x0000000000000000000000000000000000008888"
+            - name: NODE_INGRESS_CONTRACT_ADDRESS
+              value: "0x0000000000000000000000000000000000009999"
+            - name: HOST_BACK_OFFICE
+              value: https://api-backoffice.lacnet.com
+          ports:
+            - containerPort: 80
+              name: http
+              protocol: TCP
+            - containerPort: 443
+              name: https
+              protocol: TCP
+
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: ms-permission-main-dapps-svc
+  namespace: permission-dapps
+  labels:
+    svc-code: ms-permission-main-dapps-svc
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 34.67.246.161
+  selector:
+    app-code: ms-permission-main-dapps
+  ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 443
+      name: http
+
+
+

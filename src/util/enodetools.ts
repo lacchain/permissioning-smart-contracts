@@ -24,6 +24,16 @@ export type Enode = {
   did: string;
   group: string;
 };
+export type EnodeApprobe = {
+  id: string;
+  enode: string;
+  nodeType: string;
+  geoHash: string;
+  organization: string;
+  name: string;
+  did: string;
+  group: string;
+};
 
 export type EnodeTransaction = {
   enodeHigh: string;
@@ -100,7 +110,7 @@ export const getGeohash = (ip: string) =>
         json: true
       },
       (error: any, response: any, body: any) => {
-       
+
         if (response.statusCode !== 200) {
           resolve(web3.utils.asciiToHex('0x000000'));
         }
@@ -111,7 +121,7 @@ export const getGeohash = (ip: string) =>
 
         if (typeof body.latitude !== 'undefined') {
           const geoHash = ngeohash.encode(body.latitude, body.longitude, 6);
-        
+
           resolve(web3.utils.asciiToHex(geoHash));
         }
         resolve(web3.utils.asciiToHex('0x000000'));
@@ -235,13 +245,13 @@ export const identifierToParamsTransaction = (identifier: string) => {
   }
 
   if (typeof executed === 'string') {
-   
+
     if (executed==='true'){
       execute=true;
     }else{
       execute=false;
     }
-     
+
   }
   if (typeof transactionId === 'string') {
     transaction = parseInt(transactionId);

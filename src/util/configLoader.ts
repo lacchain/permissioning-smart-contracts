@@ -8,11 +8,15 @@ export type Config = {
 };
 
 const loadConfig = async (): Promise<Config> => {
+  let nodeEnv=process.env.NODE_ENV
+  console.log("nodeEnv,",nodeEnv)
   // production loader
-  if (process.env.NODE_ENV === 'production') {
+  if (nodeEnv=== 'production') {
+    console.log("PRODUCCTION")
     const response = await fetch('config.json');
 
     if (response.ok) {
+     // console.log(await response.json())
       return response.json().catch((reason: any) => {
         console.log('config parsing failed with error:', reason);
         throw new Error('Config parsing failed with error: ' + reason);
@@ -23,12 +27,15 @@ const loadConfig = async (): Promise<Config> => {
     }
     // development defaults
   } else {
+    console.log("DEVELOP")
     // ganache vs besu
     // if env variables exists, then we will assume we are connecting to besu, otherwise we will assume ganache
     let accountIngressAddress = process.env.REACT_APP_ACCOUNT_INGRESS_CONTRACT_ADDRESS;
     let nodeIngressAddress = process.env.REACT_APP_NODE_INGRESS_CONTRACT_ADDRESS;
     let networkId = process.env.REACT_APP_CHAIN_ID;
-
+    let hostOffice = process.env.REACT_APP_HOST_BACK_OFFICE;
+    console.log('config loader', hostOffice);
+    console.log('config loader', networkId);
     if (accountIngressAddress) {
       console.log('Using environment variables for contract addresses and network id');
       //make sure other two are also defined

@@ -3,14 +3,18 @@ import React, { Fragment } from 'react';
 import PropTypes from 'prop-types'; // Components
 import EnodeTable from './Table';
 import AddModal from '../../containers/Modals/AddNode';
+
 import RemoveModal from '../../containers/Modals/Remove';
 // Constants
 import { addEnodeDisplay, removeEnodeDisplay } from '../../constants/modals';
-import { Enode, EnodeTransaction } from '../../util/enodetools';
+import { Enode, EnodeTransaction,EnodeApprobe } from '../../util/enodetools';
 
 type EnodeTab = {
   list: (Enode & { identifier: string; status: string })[];
   listTransaction: (EnodeTransaction & { identifier: string; status: string })[];
+  listApproved: (EnodeApprobe )[];
+
+
   modals: {
     add: boolean;
     remove: string;
@@ -21,6 +25,8 @@ type EnodeTab = {
   handleRemove: (value: any) => Promise<void>;
   handleConfirm:(value: any) => Promise<void>;
   handleRevoke:(value: any) => Promise<void>;
+  handleApproved:(value: any) => Promise<void>;
+
   isAdmin: boolean;
   deleteTransaction: (identifier: string) => void;
   isValid: (address: string) => { valid: boolean };
@@ -35,12 +41,14 @@ type EnodeTab = {
 };
 
 const EnodeTab: React.FC<EnodeTab> = ({
+  listApproved,
   inputSearchOrganization,
   modifyInputSearchOrganization,
   modifySelectType,
   selectTypeSearch,
   handleSearch,
   handleClear,
+  handleApproved,
   list,
   listTransaction,
   modals,
@@ -55,16 +63,20 @@ const EnodeTab: React.FC<EnodeTab> = ({
   isValid,
   isOpen
 }) => (
+
   <Fragment>
+
     {isOpen && (
       <Fragment>
         <EnodeTable
+        listApproved={listApproved}
         inputSearchOrganization={inputSearchOrganization}
         modifyInputSearchOrganization={modifyInputSearchOrganization}
          modifySelectType={modifySelectType}
          selectTypeSearch={selectTypeSearch}
          handleSearch={handleSearch}
          handleClear={handleClear}
+         handleApproved={handleApproved}
           list={list}
           listTransaction={listTransaction}
           toggleModal={toggleModal}
@@ -75,12 +87,14 @@ const EnodeTab: React.FC<EnodeTab> = ({
           isReadOnly={isReadOnly}
         />
         <AddModal
+
           isOpen={modals.add && isAdmin && !isReadOnly}
           closeModal={() => toggleModal('add')(false)}
           handleAdd={handleAdd}
           display={addEnodeDisplay}
           isValid={isValid}
         />
+
         <RemoveModal
           isOpen={Boolean(modals.remove) && isAdmin && !isReadOnly}
           value={modals.remove}
@@ -94,6 +108,7 @@ const EnodeTab: React.FC<EnodeTab> = ({
 );
 
 EnodeTab.propTypes = {
+  listApproved: PropTypes.array.isRequired,
   list: PropTypes.array.isRequired,
   modals: PropTypes.shape({
     add: PropTypes.bool.isRequired,

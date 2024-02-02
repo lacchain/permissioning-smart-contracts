@@ -6,6 +6,7 @@ const hexToIp = (address: string) => {
 };
 
 const isIpv4 = (address: string) => {
+  console.log(address)
   return address.startsWith(ipv4Prefix) && parseInt(address.substring(ipv4Prefix.length), 16) <= 0xffffffff;
 };
 
