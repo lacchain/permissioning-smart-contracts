@@ -6,12 +6,12 @@ HEALTHCHECK CMD curl -f http://localhost/healthcheck || exit 1
 
 # Copy nginx conf
 COPY docker/default.conf /etc/nginx/conf.d/default.conf
-COPY docker/config.json.template /tmp/config.json.template
-COPY docker/certs /certs 
+COPY docker/config-test.json /var/www/html/config.json
+COPY docker/certs /certs
 # Copy application bundle
 RUN mkdir -p /var/www/html
 COPY build /var/www/html/
 
 # Runtime
 EXPOSE 80
-CMD envsubst < /tmp/config.json.template > /var/www/html/config.json && nginx -g "daemon off;"
+CMD  nginx -g "daemon off;"

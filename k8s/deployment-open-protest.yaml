@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: ms-permission-open-protest-dapps
-          image: edumar111/lacchain-dapps:1.1.4
+          image: edumar111/lacchain-dapps:1.1.5
           imagePullPolicy: Always
           resources:
             requests:
@@ -45,7 +45,7 @@ spec:
             - name: NODE_INGRESS_CONTRACT_ADDRESS
               value: "0x0000000000000000000000000000000000009999"
             - name: HOST_BACK_OFFICE
-              value: https://api.backoffice.lac-net.net
+              value: https://api-backoffice.lacnet.com
           ports:
             - containerPort: 80
               name: http
@@ -65,7 +65,7 @@ metadata:
     svc-code: ms-permission-open-protest-dapps-svc
 spec:
   type: LoadBalancer
-  loadBalancerIP: 34.67.246.161
+  loadBalancerIP: 34.41.12.178
   selector:
     app-code: ms-permission-open-protest-dapps
   ports:
