@@ -95,3 +95,10 @@ _Note: The `networkID` is defined as the `chainID` in the genesis file._
 }
 ```
 1. Use a webserver of your choice to host the contents of the folder as static files directing root requests to `index.html`
+
+## compilar
+
+  NODE_OPTIONS="--max-old-space-size=4096" yarn build
+
+
+

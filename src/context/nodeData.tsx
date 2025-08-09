@@ -54,11 +54,16 @@ const loadNodesApproved = (setNodeApprovedList: (node: EnodeApprobe[]) => void) 
   const fetchPromise = fetch(url, params);
   fetchPromise
     .then(response => {
-      //console.log(response);
-      return response.json();
+      console.log('response:', response);
+      if (response.status == 200) {
+        return response.json();
+      } else {
+        return null;
+      }
     })
     .then(nodes => {
       if (nodes) {
+        console.log('nodes:', nodes);
         const approveddNodeList = nodes.map((node: any) => {
           let enode = 'enode://' + node.enode.substring(2) + '@' + node.ipAddress + ':' + node.portp2p;
 
@@ -73,6 +78,7 @@ const loadNodesApproved = (setNodeApprovedList: (node: EnodeApprobe[]) => void) 
 
         setNodeApprovedList(approveddNodeList);
       } else {
+        console.log('no nodes');
         setNodeApprovedList([]);
       }
     })

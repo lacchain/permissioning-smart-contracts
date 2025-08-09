@@ -15,3 +15,6 @@ COPY build /var/www/html/
 # Runtime
 EXPOSE 80
 CMD  nginx -g "daemon off;"
+
+# docker build -t edumar111/lacchain-dapps:1.1.12 -f ./docker/Dockerfile . --no-cache
+# docker push edumar111/lacchain-dapps:1.1.12

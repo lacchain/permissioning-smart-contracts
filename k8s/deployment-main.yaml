@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: ms-permission-main-dapps
-          image: edumar111/lacchain-dapps:2.0.9
+          image: edumar111/lacchain-dapps:2.0.11
           imagePullPolicy: Always
           resources:
             requests:
